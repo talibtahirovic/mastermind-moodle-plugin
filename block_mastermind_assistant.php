@@ -98,9 +98,11 @@ class block_mastermind_assistant extends block_base {
         // Locked state: when the plugin is not yet configured, show a connect CTA
         // on every page type. Site admins see the "Connect" button; regular
         // teachers see a short message telling them to ask their administrator.
+        // Dashboard URL is always available via api_client::DASHBOARD_URL constant
+        // (overridable via $CFG->forced_plugin_settings); only api_key gates the
+        // "configured" state.
         $apikey = get_config('block_mastermind_assistant', 'api_key');
-        $dashboardurl = get_config('block_mastermind_assistant', 'dashboard_url');
-        if (empty($apikey) || empty($dashboardurl)) {
+        if (empty($apikey)) {
             return $this->get_connect_content();
         }
 
@@ -255,10 +257,9 @@ class block_mastermind_assistant extends block_base {
      * @return array
      */
     protected static function test_ai_connection(): array {
-        $dashboardurl = get_config('block_mastermind_assistant', 'dashboard_url');
         $apikey = get_config('block_mastermind_assistant', 'api_key');
 
-        if (empty($dashboardurl) || empty($apikey)) {
+        if (empty($apikey)) {
             return [
                 'status' => 'warning',
                 'message' => get_string('settings_not_configured', 'block_mastermind_assistant'),
