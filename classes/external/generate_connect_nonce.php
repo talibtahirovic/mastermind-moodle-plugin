@@ -84,11 +84,7 @@ class generate_connect_nonce extends external_api {
         $SESSION->mastermind_connect_return = $cleanreturn;
 
         $callbackurl = $CFG->wwwroot . '/blocks/mastermind_assistant/callback.php';
-        $dashboardbase = get_config('block_mastermind_assistant', 'dashboard_url');
-        if (empty($dashboardbase)) {
-            $dashboardbase = 'https://mastermindassistant.ai';
-        }
-        $dashboardbase = rtrim($dashboardbase, '/');
+        $dashboardbase = \block_mastermind_assistant\api_client::get_dashboard_url();
 
         // Pre-fill the dashboard signup form with the connecting admin's details
         // so the user only has to confirm and click — no retyping required.

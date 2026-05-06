@@ -30,6 +30,9 @@ namespace block_mastermind_assistant;
  * The dashboard handles all AI logic (prompts, function schemas, OpenAI calls).
  */
 class api_client {
+    /** @var string Default dashboard base URL. Override only via $CFG->forced_plugin_settings. */
+    public const DASHBOARD_URL = 'https://mastermindassistant.ai';
+
     /** @var string Dashboard base URL */
     private string $baseurl;
 
@@ -37,15 +40,28 @@ class api_client {
     private string $apikey;
 
     /**
+     * Resolve the dashboard base URL, respecting $CFG->forced_plugin_settings overrides.
+     *
+     * @return string Dashboard base URL with trailing slashes trimmed.
+     */
+    public static function get_dashboard_url(): string {
+        $configured = get_config('block_mastermind_assistant', 'dashboard_url');
+        if (is_string($configured) && $configured !== '') {
+            return rtrim($configured, '/');
+        }
+        return rtrim(self::DASHBOARD_URL, '/');
+    }
+
+    /**
      * Constructor - reads config from plugin settings.
      *
      * @throws \moodle_exception if settings are not configured
      */
     public function __construct() {
-        $this->baseurl = rtrim(get_config('block_mastermind_assistant', 'dashboard_url') ?: '', '/');
+        $this->baseurl = self::get_dashboard_url();
         $this->apikey = get_config('block_mastermind_assistant', 'api_key') ?: '';
 
-        if (empty($this->baseurl) || empty($this->apikey)) {
+        if (empty($this->apikey)) {
             throw new \moodle_exception('settings_not_configured', 'block_mastermind_assistant');
         }
     }
