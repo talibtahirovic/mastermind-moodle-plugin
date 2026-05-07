@@ -483,7 +483,7 @@ class block_mastermind_assistant extends block_base {
             $this->page->requires->js_call_amd(
                 'block_mastermind_assistant/connect',
                 'init',
-                [$returnurl]
+                ['mastermind-connect-btn', $returnurl]
             );
         }
 
