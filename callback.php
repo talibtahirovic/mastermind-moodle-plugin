@@ -25,7 +25,16 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once(__DIR__ . '/../../config.php');
+// Locate Moodle's config.php. In a normal install __DIR__ resolves to
+// <moodle>/blocks/mastermind_assistant/, but when the plugin is symlinked
+// outside the Moodle tree (common in dev) __DIR__ resolves through the
+// symlink and lands outside Moodle. Fall back to the requested script path
+// in that case.
+$configfile = __DIR__ . '/../../config.php';
+if (!is_file($configfile) && !empty($_SERVER['SCRIPT_FILENAME'])) {
+    $configfile = dirname($_SERVER['SCRIPT_FILENAME']) . '/../../config.php';
+}
+require_once($configfile);
 
 require_login();
 
