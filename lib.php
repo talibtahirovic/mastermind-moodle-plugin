@@ -99,3 +99,43 @@ if (!function_exists('block_mastermind_assistant_render_setup_banner')) {
         return $html;
     }
 }
+
+/**
+ * Add a secondary-navigation node so the assistant is discoverable inside courses.
+ *
+ * Decision rationale: we use the navigation extension callback instead of
+ * modifying $CFG->defaultblocks because the latter is a global override that
+ * other plugins routinely clobber on their own install/upgrade. The nav node
+ * also surfaces on small viewports where the side-pre region is hidden.
+ *
+ * @param navigation_node $navigation The course navigation node.
+ * @param stdClass $course The course record.
+ * @param context_course $context The course context.
+ * @return void
+ */
+function block_mastermind_assistant_extend_navigation_course(
+    navigation_node $navigation,
+    stdClass $course,
+    context_course $context
+): void {
+    if (!has_capability('block/mastermind_assistant:view', $context)) {
+        return;
+    }
+
+    $url = new moodle_url('/course/view.php', [
+        'id' => $course->id,
+        'mastermind' => 1, // hint that the block should auto-open / focus
+    ]);
+
+    $node = navigation_node::create(
+        get_string('nav_open_assistant', 'block_mastermind_assistant'),
+        $url,
+        navigation_node::TYPE_CUSTOM,
+        null,
+        'mastermind_assistant',
+        new pix_icon('i/marker', '')
+    );
+    $node->showinflatnavigation = false;
+
+    $navigation->add_node($node);
+}
