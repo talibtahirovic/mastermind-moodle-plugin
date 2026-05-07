@@ -24,24 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-/**
- * Inject the post-install setup banner on admin pages.
- *
- * Hook fires on every page render. Returns empty string when the banner
- * should not show; an HTML string otherwise.
- *
- * @return string HTML to inject into the page footer, or '' to skip.
- */
-function block_mastermind_assistant_before_footer(): string {
-    global $PAGE, $USER;
-
-    if (!function_exists('block_mastermind_assistant_render_setup_banner')) {
-        // Defensive: shouldn't happen — same file is being parsed.
-        return '';
-    }
-
-    return block_mastermind_assistant_render_setup_banner($PAGE, $USER);
-}
+// The legacy `block_mastermind_assistant_before_footer()` callback has been
+// migrated to the new \core\hook\output\before_footer_html_generation hook.
+// See db/hooks.php and \block_mastermind_assistant\hook_callbacks.
 
 if (!function_exists('block_mastermind_assistant_render_setup_banner')) {
     /**
