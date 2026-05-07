@@ -37,7 +37,7 @@ define([
      * @return {?HTMLElement} The hidden row, or null if it could not be found.
      */
     function hideApiKeyRow() {
-        var row = document.querySelector('[data-fullname="block_mastermind_assistant/api_key"]');
+        var row = document.getElementById('admin-api_key');
         if (row) {
             row.style.display = 'none';
         }
@@ -48,7 +48,7 @@ define([
      * Show the API Key row (used when the user clicks "Paste manually" or "Edit key").
      */
     function showApiKeyRow() {
-        var row = document.querySelector('[data-fullname="block_mastermind_assistant/api_key"]');
+        var row = document.getElementById('admin-api_key');
         if (row) {
             row.style.display = '';
             var input = row.querySelector('input[type="text"], input[type="password"]');
