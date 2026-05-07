@@ -23,16 +23,81 @@
  */
 defined('MOODLE_INTERNAL') || die();
 
+// Define helper before its first use, guarded against redeclaration on re-includes
+// (Moodle includes settings.php multiple times during admin tree builds and on
+// PHPUnit init).
+if (!function_exists('block_mastermind_assistant_render_connect_card')) {
+    /**
+     * Render the connect card HTML for the settings page.
+     *
+     * @param bool $isconnected Whether a valid-looking API key is currently saved.
+     * @param string $apikey Raw saved key (used for redacted display only).
+     * @return string HTML.
+     */
+    function block_mastermind_assistant_render_connect_card(bool $isconnected, string $apikey): string {
+        $out = '<div class="mastermind-connect-card" '
+            . 'style="padding:1rem;border:1px solid #dee2e6;border-radius:6px;background:#f8f9fa;">';
+        $out .= '<p style="margin-bottom:1rem;color:#495057;">'
+            . s(get_string('connect_card_subtitle', 'block_mastermind_assistant'))
+            . '</p>';
+
+        if ($isconnected) {
+            // Connected state.
+            $redacted = substr($apikey, 0, 11) . str_repeat('•', 8); // ma_live_xxxx••••••••
+            $out .= '<div id="mastermind-connect-status-connected">';
+            $out .= '<p style="margin-bottom:0.25rem;font-weight:600;color:#28a745;">'
+                . s(get_string('connect_status_connected', 'block_mastermind_assistant'))
+                . '</p>';
+            $out .= '<p style="margin-bottom:0.5rem;font-size:0.9em;color:#666;">'
+                . s(get_string('settings_apikey_redacted', 'block_mastermind_assistant', $redacted))
+                . '</p>';
+            $out .= '<button type="button" class="btn btn-outline-secondary btn-sm" id="mastermind-disconnect-btn">'
+                . s(get_string('connect_disconnect', 'block_mastermind_assistant'))
+                . '</button>';
+            $out .= ' <button type="button" class="btn btn-link btn-sm" id="mastermind-edit-key-btn">'
+                . s(get_string('connect_edit_key', 'block_mastermind_assistant'))
+                . '</button>';
+            $out .= '</div>';
+        } else {
+            // Disconnected state — primary CTA + manual paste disclosure.
+            $out .= '<div id="mastermind-connect-status-disconnected">';
+            $out .= '<p style="margin-bottom:0.5rem;color:#666;">'
+                . s(get_string('connect_not_yet', 'block_mastermind_assistant'))
+                . '</p>';
+            $out .= '<button type="button" class="btn btn-primary" id="mastermind-connect-btn">'
+                . s(get_string('connect_card_title', 'block_mastermind_assistant'))
+                . '</button>';
+            $out .= '<div id="mastermind-connect-fallback" hidden '
+                . 'style="margin-top:0.5rem;font-size:0.85em;color:#666;"></div>';
+            $out .= '<p style="margin-top:0.75rem;font-size:0.9em;">'
+                . s(get_string('connect_have_key', 'block_mastermind_assistant'))
+                . ' <a href="#" id="mastermind-paste-manually-link">'
+                . s(get_string('connect_manual_paste_link', 'block_mastermind_assistant'))
+                . '</a></p>';
+            $out .= '</div>';
+        }
+
+        $out .= '</div>';
+        return $out;
+    }
+}
+
 if ($ADMIN->fulltree) {
-    // Dashboard URL.
-    $settings->add(new admin_setting_configtext(
-        'block_mastermind_assistant/dashboard_url',
-        get_string('settings_dashboard_url', 'block_mastermind_assistant'),
-        get_string('settings_dashboard_url_desc', 'block_mastermind_assistant'),
-        'https://mastermindassistant.ai'
+    global $PAGE;
+
+    $apikey = get_config('block_mastermind_assistant', 'api_key') ?: '';
+    $isconnected = strpos($apikey, 'ma_live_') === 0 && strlen($apikey) >= 20;
+
+    // 1. Connect card — primary activation surface.
+    $connecthtml = block_mastermind_assistant_render_connect_card($isconnected, $apikey);
+    $settings->add(new admin_setting_heading(
+        'block_mastermind_assistant/connect_heading',
+        get_string('connect_card_title', 'block_mastermind_assistant'),
+        $connecthtml
     ));
 
-    // API Key.
+    // 2. API Key field — wrapped in a container that JS hides unless the user
+    //    explicitly chooses to paste manually or edit an existing key.
     $settings->add(new admin_setting_configtext(
         'block_mastermind_assistant/api_key',
         get_string('settings_api_key', 'block_mastermind_assistant'),
@@ -40,7 +105,7 @@ if ($ADMIN->fulltree) {
         ''
     ));
 
-    // Registration and support info.
+    // 3. Info heading — account & support.
     $infohtml = '<div style="margin-top: 0.5rem;">';
     $infohtml .= '<p>' . get_string('settings_register_desc', 'block_mastermind_assistant') . ' ';
     $infohtml .= '<a href="https://mastermindassistant.ai" target="_blank" rel="noopener">';
@@ -55,24 +120,31 @@ if ($ADMIN->fulltree) {
         $infohtml
     ));
 
-    // Test Connection button — always visible. JS validates that fields are filled.
-    $html = '<div id="mastermind-settings-info" style="margin-top: 1rem;">';
-    $html .= '<p style="margin-bottom: 0.5rem; color: #666; font-size: 0.85em;">';
-    $html .= get_string('test_connection_desc', 'block_mastermind_assistant');
-    $html .= '</p>';
-    $html .= '<button type="button" id="mastermind-test-connection" class="btn btn-secondary">';
-    $html .= get_string('test_connection', 'block_mastermind_assistant');
-    $html .= '</button>';
-    $html .= '<div id="mastermind-connection-result" style="margin-top: 0.75rem;"></div>';
-    $html .= '</div>';
+    // 4. Test Connection button.
+    $testhtml = '<div id="mastermind-settings-info" style="margin-top: 1rem;">';
+    $testhtml .= '<p style="margin-bottom: 0.5rem; color: #666; font-size: 0.85em;">';
+    $testhtml .= get_string('test_connection_desc', 'block_mastermind_assistant');
+    $testhtml .= '</p>';
+    $testhtml .= '<button type="button" id="mastermind-test-connection" class="btn btn-secondary">';
+    $testhtml .= get_string('test_connection', 'block_mastermind_assistant');
+    $testhtml .= '</button>';
+    $testhtml .= '<div id="mastermind-connection-result" style="margin-top: 0.75rem;"></div>';
+    $testhtml .= '</div>';
 
     $settings->add(new admin_setting_heading(
         'block_mastermind_assistant/connection_heading',
         get_string('connection_status', 'block_mastermind_assistant'),
-        $html
+        $testhtml
     ));
 
-    // Load the settings JS module.
-    global $PAGE;
-    $PAGE->requires->js_call_amd('block_mastermind_assistant/settings', 'init');
+    // Mount the settings JS module — handles connect button + paste/edit toggles.
+    $callbackurl = (new moodle_url(
+        '/admin/settings.php',
+        ['section' => 'blocksettingmastermind_assistant']
+    ))->out(false);
+    $PAGE->requires->js_call_amd(
+        'block_mastermind_assistant/settings',
+        'init',
+        [$callbackurl, $isconnected]
+    );
 }

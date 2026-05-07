@@ -248,4 +248,13 @@ $functions = [
         'ajax'        => true,
         'loginrequired' => true,
     ],
+    'block_mastermind_assistant_disconnect' => [
+        'classname'   => 'block_mastermind_assistant\external\disconnect',
+        'methodname'  => 'execute',
+        'description' => 'Clear the saved Mastermind API key (admin only)',
+        'type'        => 'write',
+        'ajax'        => true,
+        'loginrequired' => true,
+        'capabilities' => 'moodle/site:config',
+    ],
 ];

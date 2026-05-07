@@ -25,7 +25,20 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once(__DIR__ . '/../../config.php');
+// Locate Moodle's config.php. In a normal install __DIR__ resolves to
+// <moodle>/blocks/mastermind_assistant/ and ../../config.php works. When the
+// plugin is symlinked outside the Moodle tree (dev), `..` traversal through
+// the symlink lands outside Moodle, so we derive Moodle's root from the
+// request URL instead — no `..` traversal involved.
+$configfile = __DIR__ . '/../../config.php';
+if (!is_file($configfile) && !empty($_SERVER['DOCUMENT_ROOT']) && !empty($_SERVER['SCRIPT_NAME'])) {
+    // SCRIPT_NAME = /<moodle>/blocks/mastermind_assistant/callback.php
+    // → dirname×3 = /<moodle>
+    $moodleroot = rtrim($_SERVER['DOCUMENT_ROOT'], '/')
+        . dirname(dirname(dirname($_SERVER['SCRIPT_NAME'])));
+    $configfile = $moodleroot . '/config.php';
+}
+require_once($configfile);
 
 require_login();
 
@@ -54,7 +67,7 @@ if (strpos($key, 'ma_live_') !== 0 || strlen($key) < 20) {
 }
 
 set_config('api_key', $key, 'block_mastermind_assistant');
-set_config('dashboard_url', 'https://mastermindassistant.ai', 'block_mastermind_assistant');
+// dashboard_url is now a constant in api_client::DASHBOARD_URL; do not persist it.
 
 $returnurl = $SESSION->mastermind_connect_return ?? '/my/';
 unset($SESSION->mastermind_connect_return);

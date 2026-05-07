@@ -95,12 +95,13 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
 
     return {
         /**
-         * Initialise the connect button.
+         * Initialise a Connect button.
          *
+         * @param {string} buttonId DOM id of the button to mount on.
          * @param {string} returnUrl Local Moodle URL to redirect to after the callback.
          */
-        init: function(returnUrl) {
-            var btn = document.getElementById('mastermind-connect-btn');
+        init: function(buttonId, returnUrl) {
+            var btn = document.getElementById(buttonId || 'mastermind-connect-btn');
             if (!btn) {
                 return;
             }
