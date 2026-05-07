@@ -12,7 +12,9 @@ jobs:
 
     services:
       postgres:
-        image: postgres:14
+        # Moodle 5.0+ requires Postgres 15. Postgres 16 covers the entire matrix
+        # (older Moodle versions accept newer Postgres).
+        image: postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_HOST_AUTH_METHOD: trust
