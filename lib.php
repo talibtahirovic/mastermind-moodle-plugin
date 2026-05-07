@@ -77,9 +77,39 @@ if (!function_exists('block_mastermind_assistant_render_setup_banner')) {
             . '</div>'
             . '</div>';
 
-        if (method_exists($page, 'requires') && $page->requires) {
-            $page->requires->js_call_amd('block_mastermind_assistant/setup_banner', 'init');
-        }
+        // Inline script: the hook fires after Moodle's AMD bundle is emitted,
+        // so $PAGE->requires->js_call_amd would arrive too late. We use the
+        // globally-available require() to dynamically pull in core/ajax.
+        $html .= "\n<script>\n(function(){\n"
+            . "    var attach = function() {\n"
+            . "        var btn = document.getElementById('mastermind-setup-dismiss');\n"
+            . "        if (!btn || btn.dataset.mmBound) { return; }\n"
+            . "        btn.dataset.mmBound = '1';\n"
+            . "        btn.addEventListener('click', function() {\n"
+            . "            btn.disabled = true;\n"
+            . "            require(['core/ajax', 'core/notification'], function(Ajax, Notification) {\n"
+            . "                Ajax.call([{\n"
+            . "                    methodname: 'block_mastermind_assistant_complete_setup',\n"
+            . "                    args: {}\n"
+            . "                }])[0].then(function() {\n"
+            . "                    var banner = document.getElementById('mastermind-setup-banner');\n"
+            . "                    if (banner && banner.parentNode) {\n"
+            . "                        banner.parentNode.removeChild(banner);\n"
+            . "                    }\n"
+            . "                    return null;\n"
+            . "                }).catch(function(err) {\n"
+            . "                    btn.disabled = false;\n"
+            . "                    if (Notification && Notification.exception) { Notification.exception(err); }\n"
+            . "                });\n"
+            . "            });\n"
+            . "        });\n"
+            . "    };\n"
+            . "    if (document.readyState === 'loading') {\n"
+            . "        document.addEventListener('DOMContentLoaded', attach);\n"
+            . "    } else {\n"
+            . "        attach();\n"
+            . "    }\n"
+            . "})();\n</script>";
 
         return $html;
     }
