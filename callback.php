@@ -26,13 +26,17 @@
  */
 
 // Locate Moodle's config.php. In a normal install __DIR__ resolves to
-// <moodle>/blocks/mastermind_assistant/, but when the plugin is symlinked
-// outside the Moodle tree (common in dev) __DIR__ resolves through the
-// symlink and lands outside Moodle. Fall back to the requested script path
-// in that case.
+// <moodle>/blocks/mastermind_assistant/ and ../../config.php works. When the
+// plugin is symlinked outside the Moodle tree (dev), `..` traversal through
+// the symlink lands outside Moodle, so we derive Moodle's root from the
+// request URL instead — no `..` traversal involved.
 $configfile = __DIR__ . '/../../config.php';
-if (!is_file($configfile) && !empty($_SERVER['SCRIPT_FILENAME'])) {
-    $configfile = dirname($_SERVER['SCRIPT_FILENAME']) . '/../../config.php';
+if (!is_file($configfile) && !empty($_SERVER['DOCUMENT_ROOT']) && !empty($_SERVER['SCRIPT_NAME'])) {
+    // SCRIPT_NAME = /<moodle>/blocks/mastermind_assistant/callback.php
+    // → dirname×3 = /<moodle>
+    $moodleroot = rtrim($_SERVER['DOCUMENT_ROOT'], '/')
+        . dirname(dirname(dirname($_SERVER['SCRIPT_NAME'])));
+    $configfile = $moodleroot . '/config.php';
 }
 require_once($configfile);
 
