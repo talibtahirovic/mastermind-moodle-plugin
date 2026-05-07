@@ -54,15 +54,33 @@ class install_test extends \advanced_testcase {
         $this->assertEquals('side-pre', $instance->defaultregion);
     }
 
-    public function test_install_sends_admin_notification(): void {
+    public function test_install_queues_admin_notification(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        // Reset state so the helper actually queues.
+        \block_mastermind_assistant\local\setup_helper::reset_setup_state();
+        $DB->delete_records('task_adhoc');
+
+        xmldb_block_mastermind_assistant_install();
+
+        // Verify the adhoc task was queued (delivery happens on next cron run).
+        $tasks = $DB->get_records('task_adhoc', [
+            'classname' => '\\block_mastermind_assistant\\task\\send_install_notification',
+            'component' => 'block_mastermind_assistant',
+        ]);
+        $this->assertCount(1, $tasks);
+    }
+
+    public function test_install_notification_task_sends_to_each_admin(): void {
         $this->resetAfterTest();
         $this->preventResetByRollback();
 
-        // Reset state so the helper actually fires.
         \block_mastermind_assistant\local\setup_helper::reset_setup_state();
 
         $sink = $this->redirectMessages();
-        xmldb_block_mastermind_assistant_install();
+        $task = new \block_mastermind_assistant\task\send_install_notification();
+        $task->execute();
         $messages = $sink->get_messages();
         $sink->close();
 

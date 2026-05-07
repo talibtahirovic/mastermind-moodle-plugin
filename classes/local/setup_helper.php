@@ -73,7 +73,32 @@ class setup_helper {
     }
 
     /**
+     * Queue the install-notification adhoc task.
+     *
+     * Called from `db/install.php` and `db/upgrade.php`. We can't send
+     * messages directly from those hooks because the messaging subsystem
+     * isn't fully bootstrapped — see send_install_notification() comment
+     * for details. Idempotent: subsequent calls are no-ops once the
+     * per-install flag is set.
+     *
+     * @return void
+     */
+    public static function queue_install_notification(): void {
+        if ((string) get_config(self::COMPONENT, self::FLAG_NOTIFIED) === '1') {
+            return;
+        }
+
+        $task = new \block_mastermind_assistant\task\send_install_notification();
+        \core\task\manager::queue_adhoc_task($task);
+    }
+
+    /**
      * Send a bell-icon notification to every site admin pointing at the settings page.
+     *
+     * Should be invoked by the adhoc task — NOT directly from install/upgrade
+     * hooks. Calling from inside an install hook emits a debugging() warning
+     * because message-provider preferences aren't populated yet at that point,
+     * which moodle-plugin-ci treats as fatal during install.
      *
      * Idempotent: subsequent calls are no-ops once the per-install flag is set.
      *

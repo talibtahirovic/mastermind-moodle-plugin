@@ -82,7 +82,7 @@ function xmldb_block_mastermind_assistant_upgrade($oldversion) {
         // post-install nudge. Send it once on upgrade — the helper is idempotent
         // so this is safe even if a fresh install path also runs it.
         if (!\block_mastermind_assistant\local\setup_helper::is_setup_complete()) {
-            \block_mastermind_assistant\local\setup_helper::send_install_notification();
+            \block_mastermind_assistant\local\setup_helper::queue_install_notification();
         }
 
         upgrade_block_savepoint(true, 2026050702, 'mastermind_assistant');

@@ -95,6 +95,38 @@ class setup_helper_test extends \advanced_testcase {
         $this->assertCount(count($admins), $messages);
     }
 
+    public function test_queue_install_notification_queues_adhoc_task(): void {
+        global $DB;
+        $this->resetAfterTest();
+        setup_helper::reset_setup_state();
+        $DB->delete_records('task_adhoc');
+
+        setup_helper::queue_install_notification();
+
+        $tasks = $DB->get_records('task_adhoc', [
+            'classname' => '\\block_mastermind_assistant\\task\\send_install_notification',
+            'component' => 'block_mastermind_assistant',
+        ]);
+        $this->assertCount(1, $tasks);
+    }
+
+    public function test_queue_install_notification_is_idempotent_when_notified_flag_set(): void {
+        global $DB;
+        $this->resetAfterTest();
+        setup_helper::reset_setup_state();
+        $DB->delete_records('task_adhoc');
+
+        // Simulate "already notified" state.
+        set_config(setup_helper::FLAG_NOTIFIED, '1', setup_helper::COMPONENT);
+
+        setup_helper::queue_install_notification();
+
+        $count = $DB->count_records('task_adhoc', [
+            'classname' => '\\block_mastermind_assistant\\task\\send_install_notification',
+        ]);
+        $this->assertEquals(0, $count);
+    }
+
     public function test_send_install_notification_sets_contexturl_to_settings_page(): void {
         global $CFG;
         $this->resetAfterTest();
