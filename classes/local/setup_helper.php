@@ -86,6 +86,17 @@ class setup_helper {
             return;
         }
 
+        // During behat/phpunit util `--install`, plugin install hooks run
+        // BEFORE admin defaults are populated, so $CFG->noreplyaddress is
+        // not yet set. \core_user::get_noreply_user() reads it directly and
+        // emits an "Undefined property" warning, which moodle-plugin-ci
+        // treats as a fatal during install. Skip without marking the
+        // notified flag so the upgrade backfill can fire it later once
+        // site config is fully populated.
+        if (empty($CFG->noreplyaddress)) {
+            return;
+        }
+
         require_once($CFG->dirroot . '/lib/messagelib.php');
 
         $admins = get_admins();

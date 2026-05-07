@@ -271,7 +271,10 @@ class generate_quiz_questions extends external_api {
         $existingquestions = [];
 
         try {
-            $quizobj = \quiz::create($quiz->id, $USER->id);
+            // Moodle 4.5+ moved the legacy `quiz` class to `mod_quiz\quiz_settings`.
+            // The new class has the same `create($quizid, $userid)` signature and
+            // has been available since 4.2, so it covers our entire 4.4–5.2 matrix.
+            $quizobj = \mod_quiz\quiz_settings::create($quiz->id, $USER->id);
             $structure = $quizobj->get_structure();
             $slots = $structure->get_slots();
 
