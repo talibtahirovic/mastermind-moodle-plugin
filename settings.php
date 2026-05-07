@@ -23,6 +23,65 @@
  */
 defined('MOODLE_INTERNAL') || die();
 
+// Define helper before its first use, guarded against redeclaration on re-includes
+// (Moodle includes settings.php multiple times during admin tree builds and on
+// PHPUnit init).
+if (!function_exists('block_mastermind_assistant_render_connect_card')) {
+    /**
+     * Render the connect card HTML for the settings page.
+     *
+     * @param bool $isconnected Whether a valid-looking API key is currently saved.
+     * @param string $apikey Raw saved key (used for redacted display only).
+     * @return string HTML.
+     */
+    function block_mastermind_assistant_render_connect_card(bool $isconnected, string $apikey): string {
+        $out = '<div class="mastermind-connect-card" '
+            . 'style="padding:1rem;border:1px solid #dee2e6;border-radius:6px;background:#f8f9fa;">';
+        $out .= '<p style="margin-bottom:1rem;color:#495057;">'
+            . s(get_string('connect_card_subtitle', 'block_mastermind_assistant'))
+            . '</p>';
+
+        if ($isconnected) {
+            // Connected state.
+            $redacted = substr($apikey, 0, 11) . str_repeat('•', 8); // ma_live_xxxx••••••••
+            $out .= '<div id="mastermind-connect-status-connected">';
+            $out .= '<p style="margin-bottom:0.25rem;font-weight:600;color:#28a745;">'
+                . s(get_string('connect_status_connected', 'block_mastermind_assistant'))
+                . '</p>';
+            $out .= '<p style="margin-bottom:0.5rem;font-size:0.9em;color:#666;">'
+                . s(get_string('settings_apikey_redacted', 'block_mastermind_assistant', $redacted))
+                . '</p>';
+            $out .= '<button type="button" class="btn btn-outline-secondary btn-sm" id="mastermind-disconnect-btn">'
+                . s(get_string('connect_disconnect', 'block_mastermind_assistant'))
+                . '</button>';
+            $out .= ' <button type="button" class="btn btn-link btn-sm" id="mastermind-edit-key-btn">'
+                . s(get_string('connect_edit_key', 'block_mastermind_assistant'))
+                . '</button>';
+            $out .= '</div>';
+        } else {
+            // Disconnected state — primary CTA + manual paste disclosure.
+            $out .= '<div id="mastermind-connect-status-disconnected">';
+            $out .= '<p style="margin-bottom:0.5rem;color:#666;">'
+                . s(get_string('connect_not_yet', 'block_mastermind_assistant'))
+                . '</p>';
+            $out .= '<button type="button" class="btn btn-primary" id="mastermind-connect-btn">'
+                . s(get_string('connect_card_title', 'block_mastermind_assistant'))
+                . '</button>';
+            $out .= '<div id="mastermind-connect-fallback" hidden '
+                . 'style="margin-top:0.5rem;font-size:0.85em;color:#666;"></div>';
+            $out .= '<p style="margin-top:0.75rem;font-size:0.9em;">'
+                . s(get_string('connect_have_key', 'block_mastermind_assistant'))
+                . ' <a href="#" id="mastermind-paste-manually-link">'
+                . s(get_string('connect_manual_paste_link', 'block_mastermind_assistant'))
+                . '</a></p>';
+            $out .= '</div>';
+        }
+
+        $out .= '</div>';
+        return $out;
+    }
+}
+
 if ($ADMIN->fulltree) {
     global $PAGE;
 
@@ -88,58 +147,4 @@ if ($ADMIN->fulltree) {
         'init',
         [$callbackurl, $isconnected]
     );
-}
-
-/**
- * Render the connect card HTML for the settings page.
- *
- * @param bool $isconnected Whether a valid-looking API key is currently saved.
- * @param string $apikey Raw saved key (used for redacted display only).
- * @return string HTML.
- */
-function block_mastermind_assistant_render_connect_card(bool $isconnected, string $apikey): string {
-    $out = '<div class="mastermind-connect-card" '
-        . 'style="padding:1rem;border:1px solid #dee2e6;border-radius:6px;background:#f8f9fa;">';
-    $out .= '<p style="margin-bottom:1rem;color:#495057;">'
-        . s(get_string('connect_card_subtitle', 'block_mastermind_assistant'))
-        . '</p>';
-
-    if ($isconnected) {
-        // Connected state.
-        $redacted = substr($apikey, 0, 11) . str_repeat('•', 8); // ma_live_xxxx••••••••
-        $out .= '<div id="mastermind-connect-status-connected">';
-        $out .= '<p style="margin-bottom:0.25rem;font-weight:600;color:#28a745;">'
-            . s(get_string('connect_status_connected', 'block_mastermind_assistant'))
-            . '</p>';
-        $out .= '<p style="margin-bottom:0.5rem;font-size:0.9em;color:#666;">'
-            . s(get_string('settings_apikey_redacted', 'block_mastermind_assistant', $redacted))
-            . '</p>';
-        $out .= '<button type="button" class="btn btn-outline-secondary btn-sm" id="mastermind-disconnect-btn">'
-            . s(get_string('connect_disconnect', 'block_mastermind_assistant'))
-            . '</button>';
-        $out .= ' <button type="button" class="btn btn-link btn-sm" id="mastermind-edit-key-btn">'
-            . s(get_string('connect_edit_key', 'block_mastermind_assistant'))
-            . '</button>';
-        $out .= '</div>';
-    } else {
-        // Disconnected state — primary CTA + manual paste disclosure.
-        $out .= '<div id="mastermind-connect-status-disconnected">';
-        $out .= '<p style="margin-bottom:0.5rem;color:#666;">'
-            . s(get_string('connect_not_yet', 'block_mastermind_assistant'))
-            . '</p>';
-        $out .= '<button type="button" class="btn btn-primary" id="mastermind-connect-btn">'
-            . s(get_string('connect_card_title', 'block_mastermind_assistant'))
-            . '</button>';
-        $out .= '<div id="mastermind-connect-fallback" hidden '
-            . 'style="margin-top:0.5rem;font-size:0.85em;color:#666;"></div>';
-        $out .= '<p style="margin-top:0.75rem;font-size:0.9em;">'
-            . s(get_string('connect_have_key', 'block_mastermind_assistant'))
-            . ' <a href="#" id="mastermind-paste-manually-link">'
-            . s(get_string('connect_manual_paste_link', 'block_mastermind_assistant'))
-            . '</a></p>';
-        $out .= '</div>';
-    }
-
-    $out .= '</div>';
-    return $out;
 }
