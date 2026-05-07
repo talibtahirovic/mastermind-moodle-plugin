@@ -257,4 +257,13 @@ $functions = [
         'loginrequired' => true,
         'capabilities' => 'moodle/site:config',
     ],
+    'block_mastermind_assistant_complete_setup' => [
+        'classname'   => 'block_mastermind_assistant\external\complete_setup',
+        'methodname'  => 'execute',
+        'description' => 'Mark the post-install setup banner as dismissed',
+        'type'        => 'write',
+        'ajax'        => true,
+        'loginrequired' => true,
+        'capabilities' => 'moodle/site:config',
+    ],
 ];

@@ -57,6 +57,11 @@ function xmldb_block_mastermind_assistant_install() {
     // dashboard is unreachable or the site has no outbound network access.
     block_mastermind_assistant_send_install_ping($CFG);
 
+    // Persistent post-install nudge: bell-icon notification to every site admin.
+    // The yellow admin-page banner is rendered by lib.php (Task 5) until the
+    // admin dismisses it. setup_helper is idempotent — safe on re-runs.
+    \block_mastermind_assistant\local\setup_helper::send_install_notification();
+
     return true;
 }
 

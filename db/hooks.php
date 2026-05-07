@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version information for Mastermind Assistant
+ * Hook callback registrations for Mastermind Assistant.
  *
  * @package    block_mastermind_assistant
  * @copyright  2026 The Namers <info@mastermindassistant.ai>
@@ -24,8 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'block_mastermind_assistant';
-$plugin->version = 2026050704;
-$plugin->requires = 2024042200; // Moodle 4.4 or later.
-$plugin->maturity = MATURITY_STABLE;
-$plugin->release = 'v3.6.0';
+$callbacks = [
+    [
+        'hook' => \core\hook\output\before_footer_html_generation::class,
+        'callback' => [\block_mastermind_assistant\hook_callbacks::class, 'before_footer_html_generation'],
+    ],
+];
