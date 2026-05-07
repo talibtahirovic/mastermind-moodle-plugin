@@ -67,5 +67,15 @@ function xmldb_block_mastermind_assistant_upgrade($oldversion) {
         upgrade_block_savepoint(true, 2025100450, 'mastermind_assistant');
     }
 
+    if ($oldversion < 2026050602) {
+        // dashboard_url is now a constant in api_client::DASHBOARD_URL.
+        // Drop the persisted row so admin pages no longer surface a stale value.
+        // Sites with $CFG->forced_plugin_settings['block_mastermind_assistant']['dashboard_url']
+        // continue to override via standard Moodle mechanisms.
+        unset_config('dashboard_url', 'block_mastermind_assistant');
+
+        upgrade_block_savepoint(true, 2026050602, 'mastermind_assistant');
+    }
+
     return true;
 }

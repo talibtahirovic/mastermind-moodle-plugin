@@ -54,7 +54,7 @@ if (strpos($key, 'ma_live_') !== 0 || strlen($key) < 20) {
 }
 
 set_config('api_key', $key, 'block_mastermind_assistant');
-set_config('dashboard_url', 'https://mastermindassistant.ai', 'block_mastermind_assistant');
+// dashboard_url is now a constant in api_client::DASHBOARD_URL; do not persist it.
 
 $returnurl = $SESSION->mastermind_connect_return ?? '/my/';
 unset($SESSION->mastermind_connect_return);
