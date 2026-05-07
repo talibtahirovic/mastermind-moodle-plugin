@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version information for Mastermind Assistant
+ * Message provider definitions for Mastermind Assistant.
  *
  * @package    block_mastermind_assistant
  * @copyright  2026 The Namers <info@mastermindassistant.ai>
@@ -24,8 +24,12 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'block_mastermind_assistant';
-$plugin->version = 2026050701;
-$plugin->requires = 2024042200; // Moodle 4.4 or later.
-$plugin->maturity = MATURITY_STABLE;
-$plugin->release = 'v3.6.0';
+$messageproviders = [
+    'setup_required' => [
+        'defaults' => [
+            'popup' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,
+            'email' => MESSAGE_PERMITTED,
+        ],
+        'capability' => 'moodle/site:config',
+    ],
+];
