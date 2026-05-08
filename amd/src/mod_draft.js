@@ -863,7 +863,6 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
      * @return {Promise<string>}
      */
     function readFileAsBase64(file) {
-        // eslint-disable-next-line promise/avoid-new, promise/no-native
         return new Promise(function(resolve, reject) {
             var reader = new FileReader();
             reader.onload = function() {
@@ -939,7 +938,6 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
                 return baseArgs;
             });
         } else {
-            // eslint-disable-next-line promise/no-native
             argsPromise = Promise.resolve(baseArgs);
         }
         logFeedback('generate', 'quiz');

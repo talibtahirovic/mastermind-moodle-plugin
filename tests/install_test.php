@@ -99,7 +99,7 @@ final class install_test extends \advanced_testcase {
         // ping curl call fails fast.
         $CFG->forced_plugin_settings = $CFG->forced_plugin_settings ?? [];
         $CFG->forced_plugin_settings['block_mastermind_assistant'] = [
-            'dashboard_url' => 'http://127.0.0.1:1', // guaranteed connection refused
+            'dashboard_url' => 'http://127.0.0.1:1', // Guaranteed connection refused.
         ];
 
         // Should not throw despite the unreachable endpoint.
