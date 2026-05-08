@@ -1,0 +1,175 @@
+# Multi-version Moodle testing stack for block_mastermind_assistant.
+#
+# Spins up four Moodle versions side-by-side, each with its own MariaDB,
+# all sharing the plugin source via a bind mount so changes are picked up
+# immediately. Use it to manually verify the plugin against the same matrix
+# CI runs (4.4 / 4.5 / 5.0 / 5.1).
+#
+#   cd docker
+#   docker compose up -d            # Start all four
+#   docker compose up -d moodle50   # Start just one
+#   docker compose down             # Stop & remove containers (volumes survive)
+#   docker compose down -v          # Also wipe the moodledata + DB volumes
+#
+# After containers are healthy (~2 minutes for first boot), open:
+#   http://localhost:8044  (Moodle 4.4)
+#   http://localhost:8045  (Moodle 4.5)
+#   http://localhost:8050  (Moodle 5.0)
+#   http://localhost:8051  (Moodle 5.1)
+#
+# Login: admin / Admin123!
+#
+# The plugin source is bind-mounted from the parent directory at
+#   /bitnami/moodle/blocks/mastermind_assistant
+# so edits to amd/src/*.js, classes/*.php, etc. are visible immediately.
+# After modifying PHP that touches the install/upgrade hook, run:
+#   docker exec moodle-44 php /bitnami/moodle/admin/cli/upgrade.php --non-interactive
+#
+# Bitnami images: https://hub.docker.com/r/bitnami/moodle/tags
+
+name: mastermind-multi-moodle
+
+x-mariadb: &mariadb-defaults
+  image: bitnami/mariadb:11.8
+  environment:
+    MARIADB_ROOT_PASSWORD: rootpw
+    MARIADB_DATABASE: moodle
+    MARIADB_USER: moodle
+    MARIADB_PASSWORD: moodlepw
+  healthcheck:
+    test: ["CMD", "mariadb", "-uroot", "-prootpw", "-e", "SELECT 1"]
+    interval: 10s
+    timeout: 5s
+    retries: 8
+
+x-moodle: &moodle-defaults
+  environment:
+    ALLOW_EMPTY_PASSWORD: "no"
+    MOODLE_DATABASE_TYPE: mariadb
+    MOODLE_DATABASE_HOST: db
+    MOODLE_DATABASE_PORT_NUMBER: "3306"
+    MOODLE_DATABASE_NAME: moodle
+    MOODLE_DATABASE_USER: moodle
+    MOODLE_DATABASE_PASSWORD: moodlepw
+    MOODLE_USERNAME: admin
+    MOODLE_PASSWORD: Admin123!
+    MOODLE_EMAIL: admin@example.com
+    MOODLE_SITE_NAME: "Moodle test"
+    MOODLE_SKIP_BOOTSTRAP: "no"
+
+services:
+  ###############
+  # Moodle 4.4
+  ###############
+  db44:
+    <<: *mariadb-defaults
+    container_name: moodle-44-db
+    networks: [net44]
+    volumes: [db44-data:/bitnami/mariadb]
+
+  moodle44:
+    <<: *moodle-defaults
+    image: bitnami/moodle:4.4
+    container_name: moodle-44
+    depends_on:
+      db44:
+        condition: service_healthy
+    ports:
+      - "8044:8080"
+    networks: [net44]
+    volumes:
+      - moodle44-data:/bitnami/moodle
+      - moodle44-mdata:/bitnami/moodledata
+      - ../:/bitnami/moodle/blocks/mastermind_assistant
+
+  ###############
+  # Moodle 4.5
+  ###############
+  db45:
+    <<: *mariadb-defaults
+    container_name: moodle-45-db
+    networks: [net45]
+    volumes: [db45-data:/bitnami/mariadb]
+
+  moodle45:
+    <<: *moodle-defaults
+    image: bitnami/moodle:4.5
+    container_name: moodle-45
+    depends_on:
+      db45:
+        condition: service_healthy
+    ports:
+      - "8045:8080"
+    networks: [net45]
+    volumes:
+      - moodle45-data:/bitnami/moodle
+      - moodle45-mdata:/bitnami/moodledata
+      - ../:/bitnami/moodle/blocks/mastermind_assistant
+
+  ###############
+  # Moodle 5.0
+  ###############
+  db50:
+    <<: *mariadb-defaults
+    container_name: moodle-50-db
+    networks: [net50]
+    volumes: [db50-data:/bitnami/mariadb]
+
+  moodle50:
+    <<: *moodle-defaults
+    image: bitnami/moodle:5.0
+    container_name: moodle-50
+    depends_on:
+      db50:
+        condition: service_healthy
+    ports:
+      - "8050:8080"
+    networks: [net50]
+    volumes:
+      - moodle50-data:/bitnami/moodle
+      - moodle50-mdata:/bitnami/moodledata
+      - ../:/bitnami/moodle/public/blocks/mastermind_assistant
+
+  ###############
+  # Moodle 5.1
+  ###############
+  db51:
+    <<: *mariadb-defaults
+    container_name: moodle-51-db
+    networks: [net51]
+    volumes: [db51-data:/bitnami/mariadb]
+
+  moodle51:
+    <<: *moodle-defaults
+    image: bitnami/moodle:5.1
+    container_name: moodle-51
+    depends_on:
+      db51:
+        condition: service_healthy
+    ports:
+      - "8051:8080"
+    networks: [net51]
+    volumes:
+      - moodle51-data:/bitnami/moodle
+      - moodle51-mdata:/bitnami/moodledata
+      - ../:/bitnami/moodle/public/blocks/mastermind_assistant
+
+networks:
+  net44:
+  net45:
+  net50:
+  net51:
+
+volumes:
+  db44-data:
+  db45-data:
+  db50-data:
+  db51-data:
+  moodle44-data:
+  moodle44-mdata:
+  moodle45-data:
+  moodle45-mdata:
+  moodle50-data:
+  moodle50-mdata:
+  moodle51-data:
+  moodle51-mdata:
