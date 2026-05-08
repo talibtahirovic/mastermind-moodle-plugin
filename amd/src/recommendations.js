@@ -713,6 +713,7 @@ function(Ajax, Notification, Str, AiPolicy) {
                                 } else {
                                     // Fallback for simple format: "Name (STATUS)"
                                     var simpleMatch = item.match(/^(.+?)\s+\(([^)]+)\)$/);
+                                    // eslint-disable-next-line max-depth
                                     if (simpleMatch) {
                                         currentSection.activities.push({
                                             name: simpleMatch[1].trim(),

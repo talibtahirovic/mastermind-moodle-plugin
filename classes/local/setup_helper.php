@@ -24,8 +24,6 @@
 
 namespace block_mastermind_assistant\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Owns the post-install nudge state.
  *

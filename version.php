@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'block_mastermind_assistant';
-$plugin->version = 2026050705;
+$plugin->version = 2026050706;
 $plugin->requires = 2024042200; // Moodle 4.4 or later.
 $plugin->maturity = MATURITY_STABLE;
 $plugin->release = 'v3.6.0';

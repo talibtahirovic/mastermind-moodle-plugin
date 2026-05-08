@@ -30,10 +30,11 @@ global $CFG;
 require_once($CFG->dirroot . '/blocks/mastermind_assistant/db/install.php');
 
 /**
+ * Tests for the plugin install hook.
+ *
  * @covers ::xmldb_block_mastermind_assistant_install
  */
-class install_test extends \advanced_testcase {
-
+final class install_test extends \advanced_testcase {
     public function test_install_creates_sticky_block_instance(): void {
         global $DB;
         $this->resetAfterTest();
@@ -118,7 +119,7 @@ class install_test extends \advanced_testcase {
             'showinsubcontexts' => 1,
         ]);
 
-        // Re-run install — should not create a second sticky block.
+        // Re-run install; should not create a second sticky block.
         xmldb_block_mastermind_assistant_install();
         $countafter = $DB->count_records('block_instances', [
             'blockname' => 'mastermind_assistant',

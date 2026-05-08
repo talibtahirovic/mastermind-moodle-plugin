@@ -139,7 +139,7 @@ function block_mastermind_assistant_extend_navigation_course(
 
     $url = new moodle_url('/course/view.php', [
         'id' => $course->id,
-        'mastermind' => 1, // hint that the block should auto-open / focus
+        'mastermind' => 1, // Hint that the block should auto-open or focus.
     ]);
 
     $node = navigation_node::create(

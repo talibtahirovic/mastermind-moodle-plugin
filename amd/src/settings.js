@@ -59,6 +59,18 @@ define([
     }
 
     /**
+     * Show the disconnect confirmation modal with the given strings.
+     *
+     * @param {Array} strings Translated strings array [title, body, confirmLabel].
+     * @param {HTMLElement} btn The disconnect button.
+     */
+    function showDisconnectConfirm(strings, btn) {
+        Notification.saveCancel(strings[0], strings[1], strings[2], function() {
+            performDisconnect(btn);
+        }).catch(Notification.exception);
+    }
+
+    /**
      * Wire the Disconnect button.
      */
     function wireDisconnectButton() {
@@ -72,9 +84,7 @@ define([
                 {key: 'connect_disconnect_confirm_body', component: 'block_mastermind_assistant'},
                 {key: 'connect_disconnect', component: 'block_mastermind_assistant'}
             ]).then(function(strings) {
-                Notification.saveCancel(strings[0], strings[1], strings[2], function() {
-                    performDisconnect(btn);
-                }).catch(Notification.exception);
+                showDisconnectConfirm(strings, btn);
                 return null;
             }).catch(Notification.exception);
         });
@@ -127,6 +137,22 @@ define([
     }
 
     /**
+     * Update the test connection button label from a translated string.
+     *
+     * @param {HTMLElement} button The test connection button.
+     * @param {string} key Lang string key.
+     * @param {string} fallback Fallback text if translation fails.
+     */
+    function setTestButtonLabel(button, key, fallback) {
+        Str.get_string(key, 'block_mastermind_assistant').then(function(s) {
+            button.textContent = s;
+            return null;
+        }).catch(function() {
+            button.textContent = fallback;
+        });
+    }
+
+    /**
      * Wire the existing Test Connection button (kept from the previous version).
      */
     function wireTestConnection() {
@@ -138,12 +164,12 @@ define([
 
         button.addEventListener('click', function() {
             button.disabled = true;
+            setTestButtonLabel(button, 'testing_connection', '...');
             Str.get_string('testing_connection', 'block_mastermind_assistant').then(function(s) {
-                button.textContent = s;
                 resultDiv.innerHTML = '<div class="alert alert-info">' + escapeHtml(s) + '</div>';
                 return null;
             }).catch(function() {
-                button.textContent = '...';
+                resultDiv.innerHTML = '';
             });
 
             var savedResponse = null;
@@ -153,12 +179,7 @@ define([
             }])[0].then(function(response) {
                 button.disabled = false;
                 savedResponse = response;
-                Str.get_string('test_connection', 'block_mastermind_assistant').then(function(s) {
-                    button.textContent = s;
-                    return null;
-                }).catch(function() {
-                    button.textContent = 'Test Connection';
-                });
+                setTestButtonLabel(button, 'test_connection', 'Test Connection');
 
                 var context = {
                     success: response.success,

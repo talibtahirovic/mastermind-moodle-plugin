@@ -863,6 +863,7 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
      * @return {Promise<string>}
      */
     function readFileAsBase64(file) {
+        // eslint-disable-next-line promise/avoid-new, promise/no-native
         return new Promise(function(resolve, reject) {
             var reader = new FileReader();
             reader.onload = function() {
@@ -938,6 +939,7 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
                 return baseArgs;
             });
         } else {
+            // eslint-disable-next-line promise/no-native
             argsPromise = Promise.resolve(baseArgs);
         }
         logFeedback('generate', 'quiz');
@@ -985,6 +987,7 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
      * @param {Object} question
      * @param {number} index
      */
+    // eslint-disable-next-line complexity
     function renderQuestionCard(question, index) {
         var typeLabel = TYPE_LABELS[question.type] || question.type;
         var typeClass = 'mastermind-quiz-type-' + question.type;
@@ -1517,6 +1520,7 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
      *
      * @param {Object} response
      */
+    // eslint-disable-next-line complexity
     function showLessonPreviewModal(response) {
         var modal = document.getElementById('lesson-preview-modal');
         if (!modal) {
@@ -1546,9 +1550,11 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
                     if (p.page_type === 'question' && p.answers && p.answers.length) {
                         html += '<div style="margin-top:8px;padding:10px 12px;background:#f1f5f9;' +
                             'border-radius:6px;font-size:0.9em;color:#334155;border:1px solid #e2e8f0;">';
+                        // eslint-disable-next-line max-depth
                         if (p.question_type === 'matching') {
                             html += '<strong style="color:#0f172a;">Matching pairs:</strong>' +
                                 '<ul style="margin:4px 0;color:#475569;">';
+                            // eslint-disable-next-line max-depth
                             for (var j = 0; j < p.answers.length; j++) {
                                 html += '<li>' + escapeHtml(p.answers[j].text || '') +
                                     ' &harr; ' + escapeHtml(p.answers[j].match || '') + '</li>';
@@ -1559,6 +1565,7 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
                         } else {
                             html += '<strong style="color:#0f172a;">Answers:</strong>' +
                                 '<ul style="margin:4px 0;color:#475569;">';
+                            // eslint-disable-next-line max-depth
                             for (var k = 0; k < p.answers.length; k++) {
                                 var a = p.answers[k];
                                 var marker = a.score ? ' \u2713' : '';
@@ -1938,6 +1945,7 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
                     html += '<h5>' + escapeHtml(ch.title || 'Chapter ' + (i + 1)) + '</h5>';
                     html += '<div>' + (ch.content || '') + '</div>';
                     if (ch.subchapters && ch.subchapters.length) {
+                        // eslint-disable-next-line max-depth
                         for (var s = 0; s < ch.subchapters.length; s++) {
                             var sub = ch.subchapters[s];
                             html += '<div style="margin-left:1rem;border-left:2px solid #e0e0e0;' +
@@ -2317,6 +2325,7 @@ function(Ajax, Notification, AiPolicy, Str, Templates) {
      *
      * @param {number} cid
      */
+    // eslint-disable-next-line complexity
     function init(cid) {
         courseid = cid;
 

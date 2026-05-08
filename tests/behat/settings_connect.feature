@@ -1,4 +1,4 @@
-@block @block_mastermind_assistant
+@block @block_mastermind_assistant @javascript
 Feature: The settings page is the primary activation surface for Mastermind Assistant
   In order to connect to Mastermind without hunting for the block
   As an admin

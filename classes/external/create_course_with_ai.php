@@ -222,6 +222,44 @@ class create_course_with_ai extends external_api {
     }
 
     /**
+     * Build the course record, call create_course(), apply the AI structure, and return the response array.
+     *
+     * Shared by create_course_from_structure and create_course_from_document to avoid duplication.
+     *
+     * @param array $aistructure AI-generated course structure array.
+     * @param int $categoryid Validated category ID to place the course in.
+     * @param string $defaultname Fallback course name when ai structure has no course_name.
+     * @return array Standard response array with success, courseid, coursename, courseurl keys.
+     */
+    public static function build_and_apply(array $aistructure, int $categoryid, string $defaultname = 'Untitled Course'): array {
+        $coursedata = new stdClass();
+        $coursedata->fullname = $aistructure['course_name'] ?? $defaultname;
+        $coursedata->shortname = self::generate_shortname($coursedata->fullname);
+        $coursedata->category = $categoryid;
+        $coursedata->summary = $aistructure['course_description'] ?? '';
+        $coursedata->summaryformat = FORMAT_HTML;
+        $coursedata->format = 'topics';
+        $coursedata->numsections = count($aistructure['sections'] ?? []);
+        $coursedata->startdate = time();
+        $coursedata->visible = 1;
+        $coursedata->enablecompletion = 1;
+
+        $course = create_course($coursedata);
+
+        // Apply AI-generated structure to the course.
+        if (!empty($aistructure['sections'])) {
+            self::apply_course_structure($course->id, $aistructure['sections']);
+        }
+
+        return [
+            'success' => true,
+            'courseid' => $course->id,
+            'coursename' => $course->fullname,
+            'courseurl' => (new \moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
+        ];
+    }
+
+    /**
      * Generate a unique shortname from fullname.
      * @param string $fullname
      * @return string

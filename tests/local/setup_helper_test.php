@@ -24,13 +24,12 @@
 
 namespace block_mastermind_assistant\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests for the setup_helper class.
+ *
  * @covers \block_mastermind_assistant\local\setup_helper
  */
-class setup_helper_test extends \advanced_testcase {
-
+final class setup_helper_test extends \advanced_testcase {
     public function test_is_setup_complete_defaults_to_false(): void {
         $this->resetAfterTest();
         $this->assertFalse(setup_helper::is_setup_complete());
@@ -87,7 +86,7 @@ class setup_helper_test extends \advanced_testcase {
 
         $sink = $this->redirectMessages();
         setup_helper::send_install_notification();
-        setup_helper::send_install_notification(); // second call must not duplicate
+        setup_helper::send_install_notification(); // Second call must not duplicate.
         $messages = $sink->get_messages();
         $sink->close();
 

@@ -24,13 +24,12 @@
 
 namespace block_mastermind_assistant;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests for the api_client URL resolution and configuration handling.
+ *
  * @covers \block_mastermind_assistant\api_client
  */
-class api_client_test extends \advanced_testcase {
-
+final class api_client_test extends \advanced_testcase {
     public function test_dashboard_url_uses_constant_by_default(): void {
         $this->resetAfterTest();
         // No persisted setting, no forced override.

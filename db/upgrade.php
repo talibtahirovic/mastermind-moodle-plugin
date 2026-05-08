@@ -68,7 +68,7 @@ function xmldb_block_mastermind_assistant_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050602) {
-        // dashboard_url is now a constant in api_client::DASHBOARD_URL.
+        // The dashboard_url is now a constant in api_client::DASHBOARD_URL.
         // Drop the persisted row so admin pages no longer surface a stale value.
         // Sites with $CFG->forced_plugin_settings['block_mastermind_assistant']['dashboard_url']
         // continue to override via standard Moodle mechanisms.

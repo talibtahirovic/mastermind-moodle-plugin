@@ -30,10 +30,11 @@ global $CFG;
 require_once($CFG->dirroot . '/blocks/mastermind_assistant/lib.php');
 
 /**
+ * Tests for the course navigation extension callback.
+ *
  * @covers ::block_mastermind_assistant_extend_navigation_course
  */
-class navigation_test extends \advanced_testcase {
-
+final class navigation_test extends \advanced_testcase {
     public function test_node_added_for_users_with_view(): void {
         $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course();

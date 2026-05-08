@@ -24,8 +24,6 @@
 
 namespace block_mastermind_assistant\task;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Adhoc task wrapper around setup_helper::send_install_notification().
  *
