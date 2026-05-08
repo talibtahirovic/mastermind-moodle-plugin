@@ -99,32 +99,13 @@ class create_course_with_ai extends external_api {
                 $params['categoryid'] = \core_course_category::get_default()->id;
             }
 
-            // Create the course.
-            $coursedata = new stdClass();
-            $coursedata->fullname = $aistructure['course_name'] ?? $params['coursename'];
-            $coursedata->shortname = self::generate_shortname($coursedata->fullname);
-            $coursedata->category = $params['categoryid'];
-            $coursedata->summary = $aistructure['course_description'] ?? '';
-            $coursedata->summaryformat = FORMAT_HTML;
-            $coursedata->format = 'topics';
-            $coursedata->numsections = count($aistructure['sections'] ?? []);
-            $coursedata->startdate = time();
-            $coursedata->visible = 1;
-            $coursedata->enablecompletion = 1;
-
-            $course = create_course($coursedata);
-
-            // Apply AI-generated structure to the course.
-            if (!empty($aistructure['sections'])) {
-                self::apply_course_structure($course->id, $aistructure['sections']);
-            }
-
-            return [
-                'success' => true,
-                'courseid' => $course->id,
-                'coursename' => $course->fullname,
-                'courseurl' => (new \moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
-            ];
+            // Build the course record, create it, apply AI structure — shared with
+            // create_course_from_structure / create_course_from_document.
+            return self::build_and_apply(
+                $aistructure,
+                $params['categoryid'],
+                $params['coursename']
+            );
         } catch (Exception $e) {
             debugging("Error creating course with AI: " . $e->getMessage());
             return [
