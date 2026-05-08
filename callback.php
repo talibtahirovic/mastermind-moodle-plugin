@@ -49,18 +49,52 @@ $PAGE->set_url(new moodle_url('/blocks/mastermind_assistant/callback.php'));
 $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('pluginname', 'block_mastermind_assistant'));
 
-$sessionnonce = $SESSION->mastermind_connect_nonce ?? '';
-if (empty($sessionnonce) || !hash_equals($sessionnonce, $nonce)) {
-    unset($SESSION->mastermind_connect_nonce);
-    unset($SESSION->mastermind_connect_return);
-    throw new moodle_exception('invalid_nonce', 'block_mastermind_assistant');
-}
-
-unset($SESSION->mastermind_connect_nonce);
-
 if (strpos($key, 'ma_live_') !== 0 || strlen($key) < 20) {
     throw new moodle_exception('invalid_api_key_format', 'block_mastermind_assistant');
 }
+
+$sessionnonce = $SESSION->mastermind_connect_nonce ?? '';
+if (empty($sessionnonce) || !hash_equals($sessionnonce, $nonce)) {
+    // Nonce mismatch — typically caused by clicking Connect more than once
+    // (the second click overwrites the session nonce, but the dashboard
+    // still returns with whichever nonce was issued for the user's signup).
+    // Don't strand the admin: the key in the URL is valid (format-checked
+    // above) and they'll authenticate via require_capability anyway. Show
+    // the key with a "Paste it manually" call-to-action and let them
+    // recover via the settings page disclosure.
+    unset($SESSION->mastermind_connect_nonce);
+    unset($SESSION->mastermind_connect_return);
+
+    $settingsurl = new moodle_url('/admin/settings.php', [
+        'section' => 'blocksettingmastermind_assistant',
+    ]);
+
+    echo $OUTPUT->header();
+    echo $OUTPUT->heading(get_string('pluginname', 'block_mastermind_assistant'));
+    echo $OUTPUT->notification(
+        get_string('invalid_nonce', 'block_mastermind_assistant'),
+        \core\output\notification::NOTIFY_WARNING
+    );
+    echo html_writer::tag('p',
+        get_string('connect_recover_intro', 'block_mastermind_assistant')
+    );
+    echo html_writer::start_tag('div', [
+        'style' => 'background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;'
+            . 'padding:0.75rem;margin:0.75rem 0;font-family:monospace;'
+            . 'word-break:break-all;user-select:all;',
+    ]);
+    echo s($key);
+    echo html_writer::end_tag('div');
+    echo html_writer::link(
+        $settingsurl,
+        get_string('connect_recover_open_settings', 'block_mastermind_assistant'),
+        ['class' => 'btn btn-primary']
+    );
+    echo $OUTPUT->footer();
+    exit;
+}
+
+unset($SESSION->mastermind_connect_nonce);
 
 set_config('api_key', $key, 'block_mastermind_assistant');
 // The dashboard_url is now a constant in api_client::DASHBOARD_URL; do not persist it.
