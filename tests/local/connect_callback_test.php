@@ -85,8 +85,8 @@ final class connect_callback_test extends \advanced_testcase {
     }
 
     public function test_validate_uses_constant_time_comparison(): void {
-        // hash_equals is constant-time. We just verify the underlying behavior
-        // is correct: a partial match should NOT validate (regression guard).
+        // The hash_equals function is constant-time. We just verify the
+        // underlying behavior: a partial match must NOT validate (regression guard).
         $key = 'ma_live_abcdef1234567890';
         $this->assertEquals(
             connect_callback::RESULT_INVALID_NONCE_RECOVERABLE,

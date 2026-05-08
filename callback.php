@@ -76,7 +76,8 @@ if ($result === \block_mastermind_assistant\local\connect_callback::RESULT_INVAL
         get_string('invalid_nonce', 'block_mastermind_assistant'),
         \core\output\notification::NOTIFY_WARNING
     );
-    echo html_writer::tag('p',
+    echo html_writer::tag(
+        'p',
         get_string('connect_recover_intro', 'block_mastermind_assistant')
     );
     echo html_writer::start_tag('div', [
