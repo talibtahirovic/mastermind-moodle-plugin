@@ -49,19 +49,20 @@ $PAGE->set_url(new moodle_url('/blocks/mastermind_assistant/callback.php'));
 $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('pluginname', 'block_mastermind_assistant'));
 
-if (strpos($key, 'ma_live_') !== 0 || strlen($key) < 20) {
+$sessionnonce = $SESSION->mastermind_connect_nonce ?? '';
+$result = \block_mastermind_assistant\local\connect_callback::validate($key, $nonce, $sessionnonce);
+
+if ($result === \block_mastermind_assistant\local\connect_callback::RESULT_INVALID_KEY) {
     throw new moodle_exception('invalid_api_key_format', 'block_mastermind_assistant');
 }
 
-$sessionnonce = $SESSION->mastermind_connect_nonce ?? '';
-if (empty($sessionnonce) || !hash_equals($sessionnonce, $nonce)) {
+if ($result === \block_mastermind_assistant\local\connect_callback::RESULT_INVALID_NONCE_RECOVERABLE) {
     // Nonce mismatch — typically caused by clicking Connect more than once
     // (the second click overwrites the session nonce, but the dashboard
     // still returns with whichever nonce was issued for the user's signup).
-    // Don't strand the admin: the key in the URL is valid (format-checked
-    // above) and they'll authenticate via require_capability anyway. Show
-    // the key with a "Paste it manually" call-to-action and let them
-    // recover via the settings page disclosure.
+    // Don't strand the admin: the key in the URL is format-valid and the
+    // require_capability above ensures only an admin can reach this page.
+    // Show the key with a "Paste it manually" call-to-action.
     unset($SESSION->mastermind_connect_nonce);
     unset($SESSION->mastermind_connect_return);
 
