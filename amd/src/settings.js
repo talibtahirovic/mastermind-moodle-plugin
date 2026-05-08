@@ -27,9 +27,8 @@ define([
     'core/ajax',
     'core/notification',
     'core/str',
-    'core/templates',
-    'block_mastermind_assistant/connect'
-], function(Ajax, Notification, Str, Templates, Connect) {
+    'core/templates'
+], function(Ajax, Notification, Str, Templates) {
 
     /**
      * Hide the API Key admin row by default.
@@ -71,26 +70,6 @@ define([
     }
 
     /**
-     * Wire the Disconnect button.
-     */
-    function wireDisconnectButton() {
-        var btn = document.getElementById('mastermind-disconnect-btn');
-        if (!btn) {
-            return;
-        }
-        btn.addEventListener('click', function() {
-            Str.get_strings([
-                {key: 'connect_disconnect_confirm_title', component: 'block_mastermind_assistant'},
-                {key: 'connect_disconnect_confirm_body', component: 'block_mastermind_assistant'},
-                {key: 'connect_disconnect', component: 'block_mastermind_assistant'}
-            ]).then(function(strings) {
-                showDisconnectConfirm(strings, btn);
-                return null;
-            }).catch(Notification.exception);
-        });
-    }
-
-    /**
      * Call the disconnect web service then reload the settings page.
      *
      * @param {HTMLElement} btn The disconnect button.
@@ -106,33 +85,6 @@ define([
         }).catch(function(err) {
             btn.disabled = false;
             Notification.exception(err);
-        });
-    }
-
-    /**
-     * Wire the "Paste it manually" disclosure link (disconnected state).
-     */
-    function wirePasteManually() {
-        var link = document.getElementById('mastermind-paste-manually-link');
-        if (!link) {
-            return;
-        }
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            showApiKeyRow();
-        });
-    }
-
-    /**
-     * Wire the "Edit / replace" link shown when already connected.
-     */
-    function wireEditKey() {
-        var btn = document.getElementById('mastermind-edit-key-btn');
-        if (!btn) {
-            return;
-        }
-        btn.addEventListener('click', function() {
-            showApiKeyRow();
         });
     }
 
@@ -216,6 +168,164 @@ define([
         return div.innerHTML;
     }
 
+    /**
+     * Trigger the dashboard connect popup flow for the given button.
+     *
+     * Inline implementation (does not delegate to Connect.init) so we don't
+     * end up with two click listeners attached to the same element when the
+     * id-based and class-based paths both fire.
+     *
+     * @param {HTMLElement} btn The Connect button that was clicked.
+     * @param {string} returnUrl Local Moodle URL to redirect to after the callback.
+     */
+    function performConnect(btn, returnUrl) {
+        if (btn.dataset.mmConnectInflight) {
+            return;
+        }
+        btn.dataset.mmConnectInflight = '1';
+
+        var originalLabel = btn.textContent;
+        btn.disabled = true;
+
+        Str.get_string('connect_connecting', 'block_mastermind_assistant').then(function(label) {
+            btn.textContent = label;
+            return null;
+        }).catch(function() {
+            btn.textContent = '...';
+        });
+
+        Ajax.call([{
+            methodname: 'block_mastermind_assistant_generate_connect_nonce',
+            args: {returnurl: returnUrl || ''}
+        }])[0].then(function(response) {
+            var connectUrl = response.connect_url;
+            var newWin = window.open(connectUrl, '_blank', 'noopener');
+            if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+                showConnectFallback(connectUrl);
+            }
+            startConnectPolling(btn, originalLabel);
+            return Str.get_string('connect_waiting', 'block_mastermind_assistant');
+        }).then(function(label) {
+            btn.textContent = label;
+            return null;
+        }).catch(function(err) {
+            btn.disabled = false;
+            btn.textContent = originalLabel;
+            delete btn.dataset.mmConnectInflight;
+            Notification.exception(err);
+        });
+    }
+
+    /**
+     * Render a fallback link when the popup is suspected blocked.
+     *
+     * @param {string} url The connect URL.
+     */
+    function showConnectFallback(url) {
+        var fallback = document.getElementById('mastermind-connect-fallback');
+        if (!fallback) {
+            return;
+        }
+        Str.get_string('connect_popup_blocked', 'block_mastermind_assistant').then(function(message) {
+            fallback.innerHTML = '';
+            var p = document.createElement('p');
+            p.textContent = message;
+            p.style.margin = '0 0 6px';
+            var a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.textContent = url;
+            fallback.appendChild(p);
+            fallback.appendChild(a);
+            fallback.hidden = false;
+            return null;
+        }).catch(function() {
+            fallback.textContent = url;
+            fallback.hidden = false;
+        });
+    }
+
+    /**
+     * Begin polling test_connection until the dashboard returns success or timeout.
+     *
+     * @param {HTMLElement} btn The connect button (re-enabled on timeout).
+     * @param {string} originalLabel The original button label for restoration.
+     */
+    function startConnectPolling(btn, originalLabel) {
+        var pollIntervalMs = 3000;
+        var pollTimeoutMs = 5 * 60 * 1000;
+        var elapsed = 0;
+        var pollInterval = window.setInterval(function() {
+            elapsed += pollIntervalMs;
+            Ajax.call([{
+                methodname: 'block_mastermind_assistant_test_connection',
+                args: {}
+            }])[0].then(function(result) {
+                if (result && result.success) {
+                    window.clearInterval(pollInterval);
+                    window.location.reload();
+                }
+                return null;
+            }).catch(function() {
+                return null;
+            });
+            if (elapsed >= pollTimeoutMs) {
+                window.clearInterval(pollInterval);
+                btn.disabled = false;
+                btn.textContent = originalLabel;
+                delete btn.dataset.mmConnectInflight;
+            }
+        }, pollIntervalMs);
+    }
+
+    /**
+     * Document-level click delegation handler. Dispatches by `data-mm-action`.
+     *
+     * Using delegation (instead of getElementById + addEventListener on each
+     * element) means we keep working even if Moodle's admin form pipeline
+     * strips ids, intercepts button clicks, or re-renders the HTML.
+     *
+     * @param {string} returnUrl Local Moodle URL to return to after callback.
+     */
+    function attachDelegatedHandlers(returnUrl) {
+        if (document.body && document.body.dataset.mmSettingsBound) {
+            return;
+        }
+        if (document.body) {
+            document.body.dataset.mmSettingsBound = '1';
+        }
+
+        document.addEventListener('click', function(e) {
+            var target = e.target.closest('[data-mm-action]');
+            if (!target) {
+                return;
+            }
+            var action = target.dataset.mmAction;
+
+            if (action === 'connect') {
+                e.preventDefault();
+                performConnect(target, returnUrl);
+            } else if (action === 'paste-manually') {
+                e.preventDefault();
+                showApiKeyRow();
+            } else if (action === 'edit-key') {
+                e.preventDefault();
+                showApiKeyRow();
+            } else if (action === 'disconnect') {
+                e.preventDefault();
+                Str.get_strings([
+                    {key: 'connect_disconnect_confirm_title', component: 'block_mastermind_assistant'},
+                    {key: 'connect_disconnect_confirm_body', component: 'block_mastermind_assistant'},
+                    {key: 'connect_disconnect', component: 'block_mastermind_assistant'}
+                ]).then(function(strings) {
+                    showDisconnectConfirm(strings, target);
+                    return null;
+                }).catch(Notification.exception);
+            }
+        });
+    }
+
     return {
         /**
          * Initialise the settings-page interactions.
@@ -227,15 +337,21 @@ define([
             // Always hide the API key row first; user must click paste/edit to reveal it.
             hideApiKeyRow();
 
-            if (!isConnected) {
-                Connect.init('mastermind-connect-btn', returnUrl);
-                wirePasteManually();
-            } else {
-                wireDisconnectButton();
-                wireEditKey();
-            }
-
+            // Wire the Test Connection button (separate id, no data-mm-action).
             wireTestConnection();
+
+            // All Connect-card interactions (Connect / Paste manually / Edit key /
+            // Disconnect) are wired via document-level event delegation against
+            // data-mm-action. Survives any HTML processing that strips ids or
+            // rewires <button> click handlers, which is what was breaking the
+            // settings-page Connect button on Moodle 5.0.
+            attachDelegatedHandlers(returnUrl);
+
+            // The isConnected param is no longer used in JS (the rendered
+            // HTML's data-mm-action attributes already encode the state),
+            // but kept in the signature so settings.php's js_call_amd args
+            // don't need a coordinated change.
+            void isConnected;
         }
     };
 });

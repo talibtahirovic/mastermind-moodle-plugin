@@ -51,10 +51,12 @@ if (!function_exists('block_mastermind_assistant_render_connect_card')) {
             $out .= '<p style="margin-bottom:0.5rem;font-size:0.9em;color:#666;">'
                 . s(get_string('settings_apikey_redacted', 'block_mastermind_assistant', $redacted))
                 . '</p>';
-            $out .= '<button type="button" class="btn btn-outline-secondary btn-sm" id="mastermind-disconnect-btn">'
+            $out .= '<button type="button" class="btn btn-outline-secondary btn-sm"'
+                . ' id="mastermind-disconnect-btn" data-mm-action="disconnect">'
                 . s(get_string('connect_disconnect', 'block_mastermind_assistant'))
                 . '</button>';
-            $out .= ' <button type="button" class="btn btn-link btn-sm" id="mastermind-edit-key-btn">'
+            $out .= ' <button type="button" class="btn btn-link btn-sm"'
+                . ' id="mastermind-edit-key-btn" data-mm-action="edit-key">'
                 . s(get_string('connect_edit_key', 'block_mastermind_assistant'))
                 . '</button>';
             $out .= '</div>';
@@ -64,14 +66,15 @@ if (!function_exists('block_mastermind_assistant_render_connect_card')) {
             $out .= '<p style="margin-bottom:0.5rem;color:#666;">'
                 . s(get_string('connect_not_yet', 'block_mastermind_assistant'))
                 . '</p>';
-            $out .= '<button type="button" class="btn btn-primary" id="mastermind-connect-btn">'
+            $out .= '<button type="button" class="btn btn-primary"'
+                . ' id="mastermind-connect-btn" data-mm-action="connect">'
                 . s(get_string('connect_card_title', 'block_mastermind_assistant'))
                 . '</button>';
             $out .= '<div id="mastermind-connect-fallback" hidden '
                 . 'style="margin-top:0.5rem;font-size:0.85em;color:#666;"></div>';
             $out .= '<p style="margin-top:0.75rem;font-size:0.9em;">'
                 . s(get_string('connect_have_key', 'block_mastermind_assistant'))
-                . ' <a href="#" id="mastermind-paste-manually-link">'
+                . ' <a href="#" id="mastermind-paste-manually-link" data-mm-action="paste-manually">'
                 . s(get_string('connect_manual_paste_link', 'block_mastermind_assistant'))
                 . '</a></p>';
             $out .= '</div>';
