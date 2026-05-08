@@ -42,9 +42,13 @@ jobs:
           - moodle-branch: 'MOODLE_501_STABLE'
             php: '8.2'
             database: 'pgsql'
-          - moodle-branch: 'MOODLE_502_STABLE'
-            php: '8.3'
-            database: 'pgsql'
+          # MOODLE_502_STABLE temporarily disabled: moodle-plugin-ci ^4 ships
+          # nikic/php-parser v4 which fatals parsing some PHP 8.3 syntax used
+          # by Moodle 5.2 core. Re-enable when moodle-plugin-ci ^5 lands with
+          # php-parser v5 support.
+          # - moodle-branch: 'MOODLE_502_STABLE'
+          #   php: '8.3'
+          #   database: 'pgsql'
 
     steps:
       - name: Checkout plugin
