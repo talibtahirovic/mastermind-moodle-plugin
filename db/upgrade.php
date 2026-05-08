@@ -68,7 +68,7 @@ function xmldb_block_mastermind_assistant_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050602) {
-        // dashboard_url is now a constant in api_client::DASHBOARD_URL.
+        // The dashboard_url is now a constant in api_client::DASHBOARD_URL.
         // Drop the persisted row so admin pages no longer surface a stale value.
         // Sites with $CFG->forced_plugin_settings['block_mastermind_assistant']['dashboard_url']
         // continue to override via standard Moodle mechanisms.
@@ -82,7 +82,7 @@ function xmldb_block_mastermind_assistant_upgrade($oldversion) {
         // post-install nudge. Send it once on upgrade — the helper is idempotent
         // so this is safe even if a fresh install path also runs it.
         if (!\block_mastermind_assistant\local\setup_helper::is_setup_complete()) {
-            \block_mastermind_assistant\local\setup_helper::send_install_notification();
+            \block_mastermind_assistant\local\setup_helper::queue_install_notification();
         }
 
         upgrade_block_savepoint(true, 2026050702, 'mastermind_assistant');

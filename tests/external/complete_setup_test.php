@@ -24,14 +24,13 @@
 
 namespace block_mastermind_assistant\external;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests for the complete_setup external function.
+ *
  * @covers \block_mastermind_assistant\external\complete_setup
  * @runTestsInSeparateProcesses
  */
-class complete_setup_test extends \advanced_testcase {
-
+final class complete_setup_test extends \advanced_testcase {
     public function test_marks_setup_complete(): void {
         $this->resetAfterTest();
         $this->setAdminUser();

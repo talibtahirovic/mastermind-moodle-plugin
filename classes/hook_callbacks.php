@@ -24,8 +24,6 @@
 
 namespace block_mastermind_assistant;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Hook callbacks dispatched by Moodle's \core\hook\* system.
  */

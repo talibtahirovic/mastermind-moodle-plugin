@@ -15,17 +15,30 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version information for Mastermind Assistant
+ * Adhoc task that delivers the post-install bell-icon notification.
  *
  * @package    block_mastermind_assistant
  * @copyright  2026 The Namers <info@mastermindassistant.ai>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+namespace block_mastermind_assistant\task;
 
-$plugin->component = 'block_mastermind_assistant';
-$plugin->version = 2026050706;
-$plugin->requires = 2024042200; // Moodle 4.4 or later.
-$plugin->maturity = MATURITY_STABLE;
-$plugin->release = 'v3.6.0';
+/**
+ * Adhoc task wrapper around setup_helper::send_install_notification().
+ *
+ * The notification cannot be sent from inside the install hook because
+ * message-provider user preferences aren't populated at that point — the
+ * call would emit a debugging() warning that strict CI environments
+ * (moodle-plugin-ci) treat as fatal. Queuing as an adhoc task defers
+ * delivery to the next cron run, by which time the messaging subsystem
+ * is fully bootstrapped.
+ */
+class send_install_notification extends \core\task\adhoc_task {
+    /**
+     * Execute the task.
+     */
+    public function execute(): void {
+        \block_mastermind_assistant\local\setup_helper::send_install_notification();
+    }
+}

@@ -43,7 +43,7 @@ if (!function_exists('block_mastermind_assistant_render_connect_card')) {
 
         if ($isconnected) {
             // Connected state.
-            $redacted = substr($apikey, 0, 11) . str_repeat('•', 8); // ma_live_xxxx••••••••
+            $redacted = substr($apikey, 0, 11) . str_repeat('•', 8); // Format: ma_live_xxxx••••••••.
             $out .= '<div id="mastermind-connect-status-connected">';
             $out .= '<p style="margin-bottom:0.25rem;font-weight:600;color:#28a745;">'
                 . s(get_string('connect_status_connected', 'block_mastermind_assistant'))
@@ -96,8 +96,7 @@ if ($ADMIN->fulltree) {
         $connecthtml
     ));
 
-    // 2. API Key field — wrapped in a container that JS hides unless the user
-    //    explicitly chooses to paste manually or edit an existing key.
+    // 2. API Key field (JS hides it unless the user explicitly chooses to paste manually or edit an existing key).
     $settings->add(new admin_setting_configtext(
         'block_mastermind_assistant/api_key',
         get_string('settings_api_key', 'block_mastermind_assistant'),

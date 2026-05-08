@@ -24,14 +24,13 @@
 
 namespace block_mastermind_assistant\external;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests for the disconnect external function.
+ *
  * @covers \block_mastermind_assistant\external\disconnect
  * @runTestsInSeparateProcesses
  */
-class disconnect_test extends \advanced_testcase {
-
+final class disconnect_test extends \advanced_testcase {
     public function test_disconnect_clears_api_key(): void {
         $this->resetAfterTest();
         $this->setAdminUser();

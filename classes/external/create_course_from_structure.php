@@ -35,7 +35,6 @@ use external_single_structure;
 use external_value;
 use context_system;
 use Exception;
-use stdClass;
 
 /**
  * Create a course from a previously previewed AI structure.
@@ -88,32 +87,7 @@ class create_course_from_structure extends external_api {
                 $params['categoryid'] = \core_course_category::get_default()->id;
             }
 
-            // Create the course.
-            $coursedata = new stdClass();
-            $coursedata->fullname = $aistructure['course_name'] ?? 'Untitled Course';
-            $coursedata->shortname = create_course_with_ai::generate_shortname($coursedata->fullname);
-            $coursedata->category = $params['categoryid'];
-            $coursedata->summary = $aistructure['course_description'] ?? '';
-            $coursedata->summaryformat = FORMAT_HTML;
-            $coursedata->format = 'topics';
-            $coursedata->numsections = count($aistructure['sections'] ?? []);
-            $coursedata->startdate = time();
-            $coursedata->visible = 1;
-            $coursedata->enablecompletion = 1;
-
-            $course = create_course($coursedata);
-
-            // Apply AI-generated structure to the course.
-            if (!empty($aistructure['sections'])) {
-                create_course_with_ai::apply_course_structure($course->id, $aistructure['sections']);
-            }
-
-            return [
-                'success' => true,
-                'courseid' => $course->id,
-                'coursename' => $course->fullname,
-                'courseurl' => (new \moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
-            ];
+            return create_course_with_ai::build_and_apply($aistructure, $params['categoryid']);
         } catch (Exception $e) {
             debugging("Error creating course from structure: " . $e->getMessage());
             return [

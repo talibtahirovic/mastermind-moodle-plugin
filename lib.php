@@ -22,8 +22,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 // The legacy `block_mastermind_assistant_before_footer()` callback has been
 // migrated to the new \core\hook\output\before_footer_html_generation hook.
 // See db/hooks.php and \block_mastermind_assistant\hook_callbacks.
@@ -139,7 +137,7 @@ function block_mastermind_assistant_extend_navigation_course(
 
     $url = new moodle_url('/course/view.php', [
         'id' => $course->id,
-        'mastermind' => 1, // hint that the block should auto-open / focus
+        'mastermind' => 1, // Hint that the block should auto-open or focus.
     ]);
 
     $node = navigation_node::create(

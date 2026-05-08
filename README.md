@@ -1,5 +1,7 @@
 # Mastermind Assistant for Moodle
 
+[![moodle-plugin-ci](https://github.com/talibtahirovic/moodle-block_mastermind_assistant/actions/workflows/moodle-ci.yml/badge.svg)](https://github.com/talibtahirovic/moodle-block_mastermind_assistant/actions/workflows/moodle-ci.yml)
+
 Mastermind Assistant is a Moodle block plugin that brings AI-powered course creation, content generation, and learning analytics directly into your Moodle LMS.
 
 ## Features

@@ -24,14 +24,13 @@
 
 namespace block_mastermind_assistant\external;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests for the generate_connect_nonce external function.
+ *
  * @covers \block_mastermind_assistant\external\generate_connect_nonce
  * @runTestsInSeparateProcesses
  */
-class generate_connect_nonce_test extends \advanced_testcase {
-
+final class generate_connect_nonce_test extends \advanced_testcase {
     public function test_generates_unique_nonce(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
@@ -48,7 +47,7 @@ class generate_connect_nonce_test extends \advanced_testcase {
 
         $result = generate_connect_nonce::execute('');
 
-        // bin2hex(random_bytes(16)) produces a 32-char lowercase hex string.
+        // The bin2hex(random_bytes(16)) call produces a 32-char lowercase hex string.
         $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $result['nonce']);
     }
 
