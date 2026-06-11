@@ -518,6 +518,18 @@ class api_client {
     }
 
     /**
+     * Request grading assistance for one anonymized submission or essay answer.
+     *
+     * @param array $payload {type, task{name, instructions, rubric, max_grade},
+     *                        submission_text | file_data + file_type + file_name}
+     * @return array {success, summary, strengths, gaps, draft_feedback,
+     *                suggested_grade, grade_reasoning, confidence}
+     */
+    public function grading_assist(array $payload): array {
+        return $this->request('/api/ma/grading-assist', $payload, 'POST', 600);
+    }
+
+    /**
      * Log user feedback on AI-generated content.
      *
      * @param string $action

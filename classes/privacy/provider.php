@@ -55,6 +55,7 @@ class provider implements
             'coursename' => 'privacy:metadata:mastermind_dashboard:coursename',
             'coursedata' => 'privacy:metadata:mastermind_dashboard:coursedata',
             'activityname' => 'privacy:metadata:mastermind_dashboard:activityname',
+            'submissioncontent' => 'privacy:metadata:mastermind_dashboard:submissioncontent',
         ], 'privacy:metadata:mastermind_dashboard');
 
         return $collection;

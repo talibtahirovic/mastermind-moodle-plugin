@@ -43,6 +43,7 @@ $string['ai_policy_body'] = '<h4>Willkommen bei den KI-gestuetzten Funktionen!</
 <p>KI kann nuetzliche Vorschlaege und Informationen liefern, aber ihre Genauigkeit kann variieren. Sie sollten die bereitgestellten Informationen immer ueberpruefen, um sicherzustellen, dass sie korrekt, vollstaendig und fuer Ihre spezifische Situation geeignet sind.</p>
 <h5>Wie Ihre Daten verarbeitet werden</h5>
 <p>Diese KI-Funktion verwendet externe grosse Sprachmodelle (LLM). Wenn Sie diese Funktion nutzen, werden alle Informationen oder persoenlichen Daten, die Sie teilen, gemaess der Datenschutzrichtlinie dieser LLMs behandelt. Wir empfehlen Ihnen, deren Datenschutzrichtlinie zu lesen, um zu verstehen, wie sie mit Ihren Daten umgehen. Zusaetzlich kann eine Aufzeichnung Ihrer Interaktionen mit den KI-Funktionen auf dieser Website gespeichert werden.</p>
+<p>Wenn Sie den Bewertungsassistenten nutzen, werden von Lernenden verfasste Abgabe- oder Antworttexte zur Analyse an den KI-Dienst gesendet. Es wird dabei keine Identitaet der Lernenden (Name, Nutzer-ID oder E-Mail) uebermittelt.</p>
 <p>Wenn Sie Fragen zur Verarbeitung Ihrer Daten haben, wenden Sie sich bitte an Ihre Lehrenden oder Bildungseinrichtung.</p>
 <p><strong>Durch Fortfahren bestaetigen Sie, dass Sie diese Richtlinie verstehen und ihr zustimmen.</strong></p>';
 $string['ai_policy_declined_msg'] = 'Sie muessen die KI-Nutzungsrichtlinie akzeptieren, um KI-Funktionen zu nutzen.';
@@ -185,6 +186,36 @@ $string['glossary_entries_label'] = 'Eintraege';
 $string['glossary_preview_title'] = 'Vorschau der Glossareintraege';
 $string['go_to_main_page_to_generate'] = 'Um die KI-Inhaltserstellung zu nutzen, gehen Sie bitte zur Hauptseite der Aktivitaet.';
 $string['go_to_settings_to_generate'] = 'Um die KI-Inhaltserstellung zu nutzen, oeffnen Sie bitte die Aktivitaetseinstellungen.';
+$string['grading_analyze_button'] = 'Analysieren — verbraucht 1 Bewertungsaktion';
+$string['grading_analyzing'] = 'Wird analysiert...';
+$string['grading_assist_desc_assign'] = 'Unbewertete Abgaben zusammenfassen und einen Feedback-Entwurf mit Bewertungsvorschlag erhalten.';
+$string['grading_assist_desc_quiz'] = 'Antworten, die auf manuelle Bewertung warten, zusammenfassen und einen Feedback-Entwurf mit Bewertungsvorschlag erhalten.';
+$string['grading_assist_title'] = 'Bewertungsassistent';
+$string['grading_close'] = 'Schliessen';
+$string['grading_confidence_high'] = 'hoch';
+$string['grading_confidence_low'] = 'niedrig';
+$string['grading_confidence_medium'] = 'mittel';
+$string['grading_copied_toast'] = 'Feedback-Entwurf in die Zwischenablage kopiert.';
+$string['grading_copy_failed'] = 'Kopieren in die Zwischenablage fehlgeschlagen.';
+$string['grading_copy_feedback'] = 'In die Zwischenablage kopieren';
+$string['grading_disclaimer'] = 'KI-Vorschlag — vor der Bewertung pruefen.';
+$string['grading_draft_feedback_label'] = 'Feedback-Entwurf';
+$string['grading_error_generic'] = 'Dieses Element konnte nicht analysiert werden. Bitte versuchen Sie es erneut.';
+$string['grading_error_nothing_to_analyze'] = 'In dieser Abgabe gibt es nichts zu analysieren.';
+$string['grading_error_unsupported_file'] = 'Dieser Dateityp kann nicht analysiert werden. Unterstuetzt: PDF, DOCX oder TXT bis 10MB.';
+$string['grading_gaps_label'] = 'Luecken';
+$string['grading_insert_feedback'] = 'In das Feedback-Feld einfuegen';
+$string['grading_inserted_toast'] = 'Feedback-Entwurf eingefuegt. Bitte vor dem Speichern pruefen.';
+$string['grading_item_attempt'] = 'Versuch {$a->attempt} — F{$a->slot}';
+$string['grading_item_submission'] = 'Abgabe {$a}';
+$string['grading_loading_items'] = 'Elemente zur Bewertung werden geladen...';
+$string['grading_modal_title'] = 'Bewertungsassistent';
+$string['grading_no_items'] = 'Keine Elemente warten auf Bewertung.';
+$string['grading_no_target_toast'] = 'Kein Feedback-Feld auf dieser Seite gefunden — der Entwurf wurde stattdessen in die Zwischenablage kopiert.';
+$string['grading_open_assistant'] = 'Assistent oeffnen';
+$string['grading_strengths_label'] = 'Staerken';
+$string['grading_suggested_label'] = 'Vorschlag: {$a->grade}/{$a->max} — Konfidenz: {$a->confidence}';
+$string['grading_summary_label'] = 'Zusammenfassung';
 $string['insights_title'] = 'Erkenntnisse';
 $string['instructions_applied'] = 'Anweisungen erfolgreich angewendet!';
 $string['instructions_preview'] = 'Anweisungen';
@@ -241,6 +272,7 @@ $string['privacy:metadata:mastermind_dashboard'] = 'Kurs- und Aktivitaetsdaten w
 $string['privacy:metadata:mastermind_dashboard:activityname'] = 'Der Name der zu erstellenden Aktivitaet.';
 $string['privacy:metadata:mastermind_dashboard:coursedata'] = 'Kursstrukturdaten einschliesslich Abschnittsnamen und Aktivitaetsnamen.';
 $string['privacy:metadata:mastermind_dashboard:coursename'] = 'Der Name des Kurses.';
+$string['privacy:metadata:mastermind_dashboard:submissioncontent'] = 'Wenn Lehrende Bewertungsunterstuetzung anfordern, werden der von Lernenden verfasste Abgabetext, Essay-Antworttext oder eingereichte Dateiinhalte zur Analyse an das verbundene Mastermind-Assistant-Dashboard (das die Anthropic-API nutzt) gesendet. Es wird keine Identitaet der Lernenden (Name, Nutzer-ID oder E-Mail) uebermittelt.';
 $string['privacy:metadata:preference:ai_policy_accepted'] = 'Ob der Benutzer die KI-Nutzungsrichtlinie akzeptiert hat.';
 $string['processing'] = 'Verarbeitung...';
 $string['progress_analysis_complete'] = 'Analyse abgeschlossen!';

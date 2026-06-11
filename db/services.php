@@ -256,6 +256,14 @@ $functions = [
         'ajax'        => true,
         'loginrequired' => true,
     ],
+    'block_mastermind_assistant_grading_assist' => [
+        'classname'   => 'block_mastermind_assistant\external\grading_assist',
+        'methodname'  => 'execute',
+        'description' => 'List items awaiting manual grading and analyze one item with AI grading assistance',
+        'type'        => 'write',
+        'ajax'        => true,
+        'loginrequired' => true,
+    ],
     'block_mastermind_assistant_generate_connect_nonce' => [
         'classname'   => 'block_mastermind_assistant\external\generate_connect_nonce',
         'methodname'  => 'execute',

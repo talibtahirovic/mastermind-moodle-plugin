@@ -43,6 +43,7 @@ $string['ai_policy_body'] = '<h4>Welcome to the AI-powered features!</h4>
 <p>AI can give useful suggestions and information, but its accuracy may vary. You should always double-check the information provided to make sure it\'s accurate, complete, and suitable for your specific situation.</p>
 <h5>How your data is processed</h5>
 <p>This AI feature uses external Large Language Models (LLM). If you use this feature, any information or personal data you share will be handled according to the privacy policy of those LLMs. We recommend that you read their privacy policy to understand how they will handle your data. Additionally, a record of your interactions with the AI features may be saved in this site.</p>
+<p>When you use the grading assistant, learner-authored submission or answer text is sent to the AI service for analysis. No learner identity (name, user ID or email) is transmitted with it.</p>
 <p>If you have questions about how your data is processed, please check with your teachers or learning organisation.</p>
 <p><strong>By continuing, you acknowledge that you understand and agree to this policy.</strong></p>';
 $string['ai_policy_declined_msg'] = 'You must accept the AI usage policy to use AI features.';
@@ -185,6 +186,36 @@ $string['glossary_entries_label'] = 'Entries';
 $string['glossary_preview_title'] = 'Preview Glossary Entries';
 $string['go_to_main_page_to_generate'] = 'To use AI content generation, please go to the activity main page.';
 $string['go_to_settings_to_generate'] = 'To use AI content generation, please open the activity settings.';
+$string['grading_analyze_button'] = 'Analyze — uses 1 grading action';
+$string['grading_analyzing'] = 'Analyzing...';
+$string['grading_assist_desc_assign'] = 'Summarize ungraded submissions and get draft feedback with a suggested grade.';
+$string['grading_assist_desc_quiz'] = 'Summarize responses awaiting manual grading and get draft feedback with a suggested grade.';
+$string['grading_assist_title'] = 'Grading Assistant';
+$string['grading_close'] = 'Close';
+$string['grading_confidence_high'] = 'high';
+$string['grading_confidence_low'] = 'low';
+$string['grading_confidence_medium'] = 'medium';
+$string['grading_copied_toast'] = 'Draft feedback copied to clipboard.';
+$string['grading_copy_failed'] = 'Could not copy to clipboard.';
+$string['grading_copy_feedback'] = 'Copy to clipboard';
+$string['grading_disclaimer'] = 'AI suggestion — review before grading.';
+$string['grading_draft_feedback_label'] = 'Draft feedback';
+$string['grading_error_generic'] = 'Could not analyze this item. Please try again.';
+$string['grading_error_nothing_to_analyze'] = 'There is nothing to analyze in this submission.';
+$string['grading_error_unsupported_file'] = 'This file type cannot be analyzed. Supported: PDF, DOCX or TXT up to 10MB.';
+$string['grading_gaps_label'] = 'Gaps';
+$string['grading_insert_feedback'] = 'Insert into feedback field';
+$string['grading_inserted_toast'] = 'Draft feedback inserted. Review it before saving.';
+$string['grading_item_attempt'] = 'Attempt {$a->attempt} — Q{$a->slot}';
+$string['grading_item_submission'] = 'Submission {$a}';
+$string['grading_loading_items'] = 'Loading items awaiting grading...';
+$string['grading_modal_title'] = 'Grading Assistant';
+$string['grading_no_items'] = 'No items awaiting grading.';
+$string['grading_no_target_toast'] = 'No feedback field found on this page — the draft was copied to the clipboard instead.';
+$string['grading_open_assistant'] = 'Open assistant';
+$string['grading_strengths_label'] = 'Strengths';
+$string['grading_suggested_label'] = 'Suggested: {$a->grade}/{$a->max} — {$a->confidence} confidence';
+$string['grading_summary_label'] = 'Summary';
 $string['insights_title'] = 'Insights';
 $string['instructions_applied'] = '✓ Instructions applied successfully!';
 $string['instructions_preview'] = 'Instructions';
@@ -241,6 +272,7 @@ $string['privacy:metadata:mastermind_dashboard'] = 'Course and activity data is 
 $string['privacy:metadata:mastermind_dashboard:activityname'] = 'The name of the activity being generated.';
 $string['privacy:metadata:mastermind_dashboard:coursedata'] = 'Course structure data including section names and activity names.';
 $string['privacy:metadata:mastermind_dashboard:coursename'] = 'The name of the course.';
+$string['privacy:metadata:mastermind_dashboard:submissioncontent'] = 'When a teacher requests grading assistance, the learner-authored submission text, essay answer text or submitted file content is sent to the connected Mastermind Assistant dashboard (which uses the Anthropic API) for analysis. No learner identity (name, user ID or email) is transmitted.';
 $string['privacy:metadata:preference:ai_policy_accepted'] = 'Whether the user has accepted the AI usage policy.';
 $string['processing'] = 'Processing...';
 $string['progress_analysis_complete'] = 'Analysis complete!';
