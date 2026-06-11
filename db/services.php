@@ -264,6 +264,14 @@ $functions = [
         'ajax'        => true,
         'loginrequired' => true,
     ],
+    'block_mastermind_assistant_generate_report' => [
+        'classname'   => 'block_mastermind_assistant\external\generate_report',
+        'methodname'  => 'execute',
+        'description' => 'Generate a custom course report from a natural-language request (validated AI SQL)',
+        'type'        => 'read',
+        'ajax'        => true,
+        'loginrequired' => true,
+    ],
     'block_mastermind_assistant_generate_connect_nonce' => [
         'classname'   => 'block_mastermind_assistant\external\generate_connect_nonce',
         'methodname'  => 'execute',

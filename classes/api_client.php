@@ -530,6 +530,21 @@ class api_client {
     }
 
     /**
+     * Generate a custom course report (title, explanation, candidate SQL).
+     *
+     * The returned SQL is a *candidate* only: callers must pass it through
+     * \block_mastermind_assistant\local\report_sql_validator before letting
+     * it anywhere near the database.
+     *
+     * @param array $payload {request, dbtype, course_name, activity_names,
+     *                        conversation, previous_sql?, repair?}
+     * @return array {success, title, explanation, sql, columns}
+     */
+    public function generate_report(array $payload): array {
+        return $this->request('/api/ma/generate-report', $payload, 'POST', 600);
+    }
+
+    /**
      * Log user feedback on AI-generated content.
      *
      * @param string $action
