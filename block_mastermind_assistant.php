@@ -44,6 +44,8 @@ class block_mastermind_assistant extends block_base {
         // Set title based on context.
         if ($this->is_course_management_page()) {
             $this->title = get_string('pluginname', 'block_mastermind_assistant');
+        } else if ($this->get_grading_page_kind() !== '') {
+            $this->title = get_string('grading_assist_title', 'block_mastermind_assistant');
         } else if ($this->is_mod_edit_page()) {
             $this->title = get_string('ai_content_assistant', 'block_mastermind_assistant');
         } else {
@@ -109,6 +111,14 @@ class block_mastermind_assistant extends block_base {
         // Check if we're on the course management page.
         if ($this->is_course_management_page()) {
             return $this->get_course_management_content();
+        }
+
+        // Grading pages (assignment grading/grader views, quiz manual grading)
+        // get the Grading Assistant card. Must be checked before the generic
+        // mod page branches because both match /mod/assign/view.php.
+        $gradingkind = $this->get_grading_page_kind();
+        if ($gradingkind !== '') {
+            return $this->get_grading_assist_content($gradingkind);
         }
 
         // Check if we're on a supported mod page — show AI assistant.
@@ -194,6 +204,89 @@ class block_mastermind_assistant extends block_base {
 
         // Any /mod/xxx/ page or the modedit.php settings page.
         return (strpos($pageurl, '/mod/') !== false || strpos($pageurl, '/course/modedit.php') !== false);
+    }
+
+    /**
+     * Detect manual grading pages and return which module type they belong to.
+     *
+     * Assignment grading: page types mod-assign-grader / mod-assign-grading
+     * (mod/assign/view.php with action=grader|grading).
+     * Quiz manual grading: page type mod-quiz-report with mode=grading.
+     *
+     * @return string 'assign', 'quiz', or '' when not on a grading page.
+     */
+    protected function get_grading_page_kind(): string {
+        $pagetype = $this->page->pagetype;
+
+        if ($pagetype === 'mod-assign-grader' || $pagetype === 'mod-assign-grading') {
+            return 'assign';
+        }
+
+        $pageurl = '';
+        if ($this->page->has_set_url()) {
+            $pageurl = $this->page->url->out_as_local_url(false);
+        }
+
+        if (strpos($pageurl, '/mod/assign/view.php') !== false) {
+            $action = optional_param('action', '', PARAM_ALPHA);
+            if ($action === 'grader' || $action === 'grading') {
+                return 'assign';
+            }
+        }
+
+        if ($pagetype === 'mod-quiz-report' || strpos($pageurl, '/mod/quiz/report.php') !== false) {
+            if (optional_param('mode', '', PARAM_ALPHA) === 'grading') {
+                return 'quiz';
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Render the Grading Assistant card on manual grading pages.
+     *
+     * Requires both the block view capability and the native grading
+     * capability the page already enforces (mod/assign:grade or
+     * mod/quiz:grade) in the module context.
+     *
+     * @param string $kind 'assign' or 'quiz'.
+     * @return stdClass
+     */
+    protected function get_grading_assist_content(string $kind): stdClass {
+        $this->content->text = '';
+        $this->content->footer = '';
+
+        $cmid = optional_param('id', 0, PARAM_INT);
+        if (!$cmid) {
+            return $this->content;
+        }
+
+        $context = context_module::instance($cmid, IGNORE_MISSING);
+        if (!$context) {
+            return $this->content;
+        }
+
+        $gradecapability = ($kind === 'assign') ? 'mod/assign:grade' : 'mod/quiz:grade';
+        if (
+            !has_capability('block/mastermind_assistant:view', $context) ||
+            !has_capability($gradecapability, $context)
+        ) {
+            return $this->content;
+        }
+
+        $data = (object) [
+            'cmid' => $cmid,
+            'is_assign' => ($kind === 'assign'),
+            'is_quiz' => ($kind === 'quiz'),
+        ];
+
+        $this->content->text = $this->page->get_renderer('block_mastermind_assistant')
+            ->render_from_template('block_mastermind_assistant/grading_assist', $data);
+
+        $this->page->requires->js_call_amd('block_mastermind_assistant/grading_assist', 'init', [$cmid, $kind]);
+
+        return $this->content;
     }
 
     /**

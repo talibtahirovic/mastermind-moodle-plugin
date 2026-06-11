@@ -1,0 +1,81 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_mastermind_assistant/grading_assist
+
+    Grading Assistant card shown on assignment grading and quiz manual
+    grading pages, plus the (initially hidden) items modal shell.
+
+    Context variables required for this template:
+    * cmid - Course module ID
+    * is_assign - Boolean, true on assignment grading pages
+    * is_quiz - Boolean, true on quiz manual grading pages
+
+    Example context (json):
+    {
+        "cmid": 12,
+        "is_assign": true,
+        "is_quiz": false
+    }
+}}
+
+<div class="mastermind-mod-draft-container mastermind-grading-card">
+    <div class="mastermind-mod-draft-header">
+        <svg class="mastermind-mod-draft-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3 class="mastermind-mod-draft-title">{{#str}} grading_assist_title, block_mastermind_assistant {{/str}}</h3>
+    </div>
+
+    <div class="mastermind-mod-draft-intro">
+        <p class="mastermind-mod-draft-text">
+            {{#is_assign}}{{#str}} grading_assist_desc_assign, block_mastermind_assistant {{/str}}{{/is_assign}}
+            {{#is_quiz}}{{#str}} grading_assist_desc_quiz, block_mastermind_assistant {{/str}}{{/is_quiz}}
+        </p>
+    </div>
+
+    <button id="mastermind-grading-open-btn" class="mastermind-action-button" data-cmid="{{cmid}}">
+        <svg class="mastermind-button-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor"/>
+        </svg>
+        <span>{{#str}} grading_open_assistant, block_mastermind_assistant {{/str}}</span>
+    </button>
+</div>
+
+{{! Grading assistant modal — items list is rendered by the AMD module. }}
+<div id="grading-assist-modal" class="mastermind-preview-overlay" style="display:none;">
+    <div class="mastermind-preview-modal mastermind-preview-modal-wide">
+        <div class="mastermind-preview-header">
+            <h3 class="mastermind-preview-title">{{#str}} grading_modal_title, block_mastermind_assistant {{/str}}</h3>
+            <button id="grading-assist-close-btn" class="mastermind-close-modal-btn" aria-label="Close">&times;</button>
+        </div>
+        <div class="mastermind-preview-body">
+            <div class="mastermind-preview-main">
+                <p id="grading-assist-status" class="mastermind-mod-draft-text">
+                    {{#str}} grading_loading_items, block_mastermind_assistant {{/str}}
+                </p>
+                <div id="grading-assist-items" class="mastermind-preview-content"></div>
+            </div>
+        </div>
+        <div class="mastermind-preview-footer">
+            <button id="grading-assist-cancel-btn" class="mastermind-secondary-button mastermind-preview-btn">
+                {{#str}} grading_close, block_mastermind_assistant {{/str}}
+            </button>
+        </div>
+    </div>
+</div>
