@@ -75,6 +75,14 @@ final class report_sql_validator_test extends \advanced_testcase {
             'deleted column does not trip DELETE' => [
                 'SELECT id FROM {user} WHERE deleted = 0 AND id = :courseid',
             ],
+            'scorm 4.3+ attempt/value tables' => [
+                'SELECT u.id, u.firstname, sv.value
+                   FROM {scorm_attempt} sa
+                   JOIN {scorm_scoes_value} sv ON sv.attemptid = sa.id
+                   JOIN {scorm} s ON s.id = sa.scormid
+                   JOIN {user} u ON u.id = sa.userid
+                  WHERE s.course = :courseid',
+            ],
         ];
     }
 
@@ -162,6 +170,9 @@ final class report_sql_validator_test extends \advanced_testcase {
             'non-allow-listed table {sessions}' => [
                 'SELECT id FROM {sessions} WHERE userid = :courseid', 'allow-list',
             ],
+            'removed 4.2 table {scorm_scoes_track}' => [
+                'SELECT id FROM {scorm_scoes_track} WHERE scormid = :courseid', 'allow-list',
+            ],
             'empty placeholder' => ['SELECT id FROM {} WHERE id = :courseid', 'allow-list'],
             'uppercase placeholder is not an exact match' => [
                 'SELECT id FROM {User} WHERE id = :courseid', 'allow-list',
@@ -235,7 +246,7 @@ final class report_sql_validator_test extends \advanced_testcase {
      * Every allow-listed token validates and nothing unexpected is listed.
      */
     public function test_all_allow_listed_tables_accepted(): void {
-        $this->assertCount(32, report_sql_validator::ALLOWED_TABLES);
+        $this->assertCount(35, report_sql_validator::ALLOWED_TABLES);
         foreach (report_sql_validator::ALLOWED_TABLES as $table) {
             $sql = 'SELECT id FROM {' . $table . '} WHERE id = :courseid';
             $result = report_sql_validator::validate($sql);
@@ -244,5 +255,7 @@ final class report_sql_validator_test extends \advanced_testcase {
         $this->assertNotContains('config', report_sql_validator::ALLOWED_TABLES);
         $this->assertNotContains('sessions', report_sql_validator::ALLOWED_TABLES);
         $this->assertNotContains('external_tokens', report_sql_validator::ALLOWED_TABLES);
+        // Removed in Moodle 4.3 — replaced by scorm_attempt/scorm_scoes_value.
+        $this->assertNotContains('scorm_scoes_track', report_sql_validator::ALLOWED_TABLES);
     }
 }

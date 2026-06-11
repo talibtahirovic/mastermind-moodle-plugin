@@ -73,7 +73,10 @@ class report_sql_validator {
         'groups',
         'groups_members',
         'user_lastaccess',
-        'scorm_scoes_track',
+        'scorm',
+        'scorm_attempt',
+        'scorm_scoes_value',
+        'scorm_element',
     ];
 
     /**
