@@ -49,6 +49,11 @@ function($, Ajax, Notification, AiPolicy, Str) {
     // Refinement conversation — lives in memory for the modal's lifetime.
     var refineConversation = [];
 
+    // Source excerpt from the document flow (first chars of the extracted
+    // text). Empty for text-prompt previews; forwarded as source_summary on
+    // refinement so the dashboard stays grounded in the source document.
+    var refineSourceSummary = '';
+
     // Maximum conversation entries kept client-side (oldest pairs dropped).
     var MAX_CONVERSATION_ENTRIES = 8;
 
@@ -573,12 +578,17 @@ function($, Ajax, Notification, AiPolicy, Str) {
      * @param {boolean} preserveConversation Keep the refinement conversation (refine re-render)
      */
     function showCoursePreviewModal(structure, preserveConversation) {
-        pendingStructure = structure;
-
-        // Fresh preview: start a new refinement conversation.
+        // Fresh preview: start a new refinement conversation and capture the
+        // document source excerpt (only the document flow provides one).
         if (!preserveConversation) {
             refineConversation = [];
+            refineSourceSummary = structure.source_excerpt || '';
         }
+
+        // The excerpt is refinement context, not part of the course
+        // structure — keep it out of the preview and creation payloads.
+        delete structure.source_excerpt;
+        pendingStructure = structure;
 
         // Remove any existing modal.
         $('#mastermind-course-preview-overlay').remove();
@@ -767,6 +777,12 @@ function($, Ajax, Notification, AiPolicy, Str) {
             conversation: refineConversation,
             feedback: feedback
         };
+
+        // Document flow only: keep refinements grounded in the source text.
+        if (refineSourceSummary) {
+            // eslint-disable-next-line camelcase
+            payload.source_summary = refineSourceSummary;
+        }
 
         Ajax.call([{
             methodname: 'block_mastermind_assistant_refine_course',
