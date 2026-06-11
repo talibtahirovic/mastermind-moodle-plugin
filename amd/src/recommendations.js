@@ -22,6 +22,23 @@
  */
 define(['core/ajax', 'core/notification', 'core/str', 'block_mastermind_assistant/ai_policy'],
 function(Ajax, Notification, Str, AiPolicy) {
+
+    /**
+     * Refinement state for the results modal.
+     *
+     * Lives in JS memory for the lifetime of the modal: reset whenever a
+     * fresh analysis opens the modal, kept across refine round-trips.
+     */
+    var refineState = {
+        coursedata: null,
+        conversation: [],
+        recommendations: '',
+        structure: ''
+    };
+
+    // Maximum conversation entries kept client-side (oldest pairs dropped).
+    var MAX_CONVERSATION_ENTRIES = 8;
+
     /**
      * Get course data for recommendations
      * @param {int} courseid The course ID
@@ -102,6 +119,13 @@ function(Ajax, Notification, Str, AiPolicy) {
         });
         btn.disabled = true;
         showProgress();
+
+        // Keep the raw course data for refinement round-trips.
+        try {
+            refineState.coursedata = JSON.parse(coursedata);
+        } catch (e) {
+            refineState.coursedata = null;
+        }
 
         // Log action consumption at generation time (action is consumed even if result is not applied).
         Ajax.call([{
@@ -319,6 +343,12 @@ function(Ajax, Notification, Str, AiPolicy) {
             existing.remove();
         }
 
+        // Fresh analysis result: reset the refinement conversation and
+        // remember the currently displayed result for refine round-trips.
+        refineState.conversation = [];
+        refineState.recommendations = recommendations;
+        refineState.structure = structure;
+
         var sections = parseAIResponse(recommendations);
         var formattedRecommendations = formatRecommendationsAsChecklist(sections.mainRecommendations);
 
@@ -340,10 +370,18 @@ function(Ajax, Notification, Str, AiPolicy) {
             '<div id="ai-results-structure-content"></div>' +
             '</div>' +
             '</div>' +
+            '<div class="ai-refine-bar">' +
+            '<textarea id="ai-refine-feedback" class="ai-refine-textarea" rows="2"' +
+            ' placeholder="Tell the assistant what to change or add context..."></textarea>' +
+            '<button id="ai-refine-btn" class="ai-refine-btn">' +
+            'Regenerate &mdash; uses 1 analysis action</button>' +
+            '</div>' +
             '</div>' +
             '</div>';
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        initRefineBar();
 
         // Render the structure tree into the modal's container
         if (structure && structure.trim()) {
@@ -379,6 +417,190 @@ function(Ajax, Notification, Str, AiPolicy) {
                 }
                 document.removeEventListener('keydown', escapeHandler);
             }
+        });
+    }
+
+    /**
+     * Localize and wire up the refinement bar in the results modal.
+     */
+    function initRefineBar() {
+        var textarea = document.getElementById('ai-refine-feedback');
+        var btn = document.getElementById('ai-refine-btn');
+        if (!textarea || !btn) {
+            return;
+        }
+
+        // Replace the hardcoded fallbacks with localized strings.
+        Str.get_strings([
+            {key: 'refine_placeholder', component: 'block_mastermind_assistant'},
+            {key: 'refine_analysis_button', component: 'block_mastermind_assistant'}
+        ]).then(function(strings) {
+            textarea.placeholder = strings[0];
+            if (!btn.disabled) {
+                btn.innerHTML = escapeHtml(strings[1]);
+            }
+            return strings;
+        }).catch(function() {
+            // Keep English fallbacks.
+        });
+
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            handleRefineAnalysis();
+        });
+    }
+
+    /**
+     * Send the user's refinement feedback to the dashboard and replace the
+     * modal contents with the refined result. Billed as one analysis action.
+     */
+    function handleRefineAnalysis() {
+        var textarea = document.getElementById('ai-refine-feedback');
+        var btn = document.getElementById('ai-refine-btn');
+        if (!textarea || !btn) {
+            return;
+        }
+
+        var feedback = textarea.value.trim();
+        if (!feedback) {
+            return;
+        }
+
+        // Existing loading pattern: disable inputs, show processing label.
+        var originalLabel = btn.innerHTML;
+        btn.disabled = true;
+        textarea.disabled = true;
+        Str.get_string('processing', 'block_mastermind_assistant').then(function(s) {
+            btn.innerHTML = s;
+            return s;
+        }).catch(function() {
+            btn.innerHTML = 'Processing...';
+        });
+
+        var courseid = getCourseId();
+
+        // Log action consumption (refinement is billed like a regenerate).
+        Ajax.call([{
+            methodname: 'block_mastermind_assistant_log_generation_feedback',
+            args: {
+                courseid: courseid,
+                action: 'regenerate',
+                moduletype: 'course',
+                activityname: '',
+                coursename: ''
+            }
+        }])[0].catch(function() {
+            // Silent — feedback logging is non-critical.
+        });
+
+        var coursedata = refineState.coursedata || {};
+        var payload = {
+            course: coursedata.course || {},
+            sections: coursedata.sections || [],
+            activities: coursedata.activities || [],
+            // eslint-disable-next-line camelcase
+            previous_result: {
+                recommendations: refineState.recommendations,
+                structure: refineState.structure
+            },
+            conversation: refineState.conversation,
+            feedback: feedback
+        };
+
+        Ajax.call([{
+            methodname: 'block_mastermind_assistant_refine_analysis',
+            args: {
+                courseid: courseid,
+                payload: JSON.stringify(payload)
+            },
+            timeout: 600000
+        }])[0]
+            .then(function(response) {
+                if (!response.success) {
+                    showRefineError(response.error);
+                } else {
+                    appendRefineConversation(feedback, response.recommendations);
+                    refineState.recommendations = response.recommendations;
+                    refineState.structure = response.structure;
+                    renderRefinedResults(response.recommendations, response.structure);
+                    textarea.value = '';
+                }
+                textarea.disabled = false;
+                btn.disabled = false;
+                btn.innerHTML = originalLabel;
+                return response;
+            })
+            .catch(function(error) {
+                showRefineError(error && error.message);
+                textarea.disabled = false;
+                btn.disabled = false;
+                btn.innerHTML = originalLabel;
+            });
+    }
+
+    /**
+     * Append a user/assistant exchange to the refinement conversation,
+     * capping it at MAX_CONVERSATION_ENTRIES by dropping the oldest pairs.
+     *
+     * @param {string} feedback The user's refinement feedback
+     * @param {string} recommendations The assistant's refined recommendations
+     */
+    function appendRefineConversation(feedback, recommendations) {
+        refineState.conversation.push({role: 'user', content: feedback});
+        refineState.conversation.push({
+            role: 'assistant',
+            // Compact summary: recommendations only, truncated.
+            content: JSON.stringify(recommendations || '').substring(0, 2000)
+        });
+        while (refineState.conversation.length > MAX_CONVERSATION_ENTRIES) {
+            refineState.conversation.splice(0, 2);
+        }
+    }
+
+    /**
+     * Replace the modal's recommendations and structure content with a
+     * refined result, reusing the initial rendering path.
+     *
+     * @param {string} recommendations Refined recommendations text
+     * @param {string} structure Refined structure text
+     */
+    function renderRefinedResults(recommendations, structure) {
+        var modal = document.getElementById('ai-results-modal');
+        if (!modal) {
+            return;
+        }
+
+        var recContainer = modal.querySelector('.ai-results-recommendations-content');
+        if (recContainer) {
+            var sections = parseAIResponse(recommendations);
+            recContainer.innerHTML = formatRecommendationsAsChecklist(sections.mainRecommendations);
+        }
+
+        // Re-rendering the structure also recreates the Apply button so it
+        // always applies the currently displayed structure.
+        var structureContainer = document.getElementById('ai-results-structure-content');
+        if (structureContainer && structure && structure.trim()) {
+            renderUpdatedCourseStructure(structure, structureContainer);
+        }
+    }
+
+    /**
+     * Show a refinement error notification.
+     *
+     * @param {string} detail Optional server-provided error detail
+     */
+    function showRefineError(detail) {
+        Str.get_string('refine_error', 'block_mastermind_assistant').then(function(s) {
+            Notification.addNotification({
+                message: detail ? s + ' (' + detail + ')' : s,
+                type: 'error'
+            });
+            return s;
+        }).catch(function() {
+            Notification.addNotification({
+                message: detail || 'Could not refine the result. Please try again.',
+                type: 'error'
+            });
         });
     }
 
@@ -528,21 +750,25 @@ function(Ajax, Notification, Str, AiPolicy) {
 
         container.innerHTML = html;
 
-        // Event delegation for section toggle headers
-        container.addEventListener('click', function(e) {
-            var header = e.target.closest('[data-toggle-section]');
-            if (header) {
-                var idx = header.getAttribute('data-toggle-section');
-                var content = document.getElementById('content-updated-' + idx);
-                var icon = document.getElementById('toggle-updated-' + idx);
-                if (content) {
-                    content.classList.toggle('expanded');
+        // Event delegation for section toggle headers (bound once per
+        // container — refinement re-renders into the same element).
+        if (!container.dataset.mastermindToggleBound) {
+            container.dataset.mastermindToggleBound = '1';
+            container.addEventListener('click', function(e) {
+                var header = e.target.closest('[data-toggle-section]');
+                if (header) {
+                    var idx = header.getAttribute('data-toggle-section');
+                    var content = document.getElementById('content-updated-' + idx);
+                    var icon = document.getElementById('toggle-updated-' + idx);
+                    if (content) {
+                        content.classList.toggle('expanded');
+                    }
+                    if (icon) {
+                        icon.classList.toggle('expanded');
+                    }
                 }
-                if (icon) {
-                    icon.classList.toggle('expanded');
-                }
-            }
-        });
+            });
+        }
 
         // Event listener for Apply button
         var applyButton = document.getElementById('apply-course-structure');

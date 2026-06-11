@@ -146,6 +146,16 @@ class api_client {
     }
 
     /**
+     * Refine a previous full analysis result based on user feedback.
+     *
+     * @param array $payload {course, sections, activities, previous_result, conversation, feedback}
+     * @return array {recommendations: string, structure: {sections: [...]}}
+     */
+    public function refine_analysis(array $payload): array {
+        return $this->request('/api/ma/refine-analysis', $payload);
+    }
+
+    /**
      * Generate a complete course structure from scratch.
      *
      * @param string $coursename
@@ -153,6 +163,16 @@ class api_client {
      */
     public function generate_course(string $coursename): array {
         return $this->request('/api/ma/generate-course', ['coursename' => $coursename]);
+    }
+
+    /**
+     * Refine a previously generated course structure based on user feedback.
+     *
+     * @param array $payload {course_name, previous_result, conversation, feedback, source_summary?}
+     * @return array Refined course structure (same shape as generate_course()).
+     */
+    public function refine_course(array $payload): array {
+        return $this->request('/api/ma/refine-course', $payload);
     }
 
     /**

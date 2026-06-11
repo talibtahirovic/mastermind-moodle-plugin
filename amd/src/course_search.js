@@ -46,6 +46,12 @@ function($, Ajax, Notification, AiPolicy, Str) {
     // Preview modal state.
     var pendingStructure = null;
 
+    // Refinement conversation — lives in memory for the modal's lifetime.
+    var refineConversation = [];
+
+    // Maximum conversation entries kept client-side (oldest pairs dropped).
+    var MAX_CONVERSATION_ENTRIES = 8;
+
     var MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     var ALLOWED_TYPES = [
         'application/pdf',
@@ -564,9 +570,15 @@ function($, Ajax, Notification, AiPolicy, Str) {
     /**
      * Show the course structure preview modal
      * @param {object} structure AI-generated structure
+     * @param {boolean} preserveConversation Keep the refinement conversation (refine re-render)
      */
-    function showCoursePreviewModal(structure) {
+    function showCoursePreviewModal(structure, preserveConversation) {
         pendingStructure = structure;
+
+        // Fresh preview: start a new refinement conversation.
+        if (!preserveConversation) {
+            refineConversation = [];
+        }
 
         // Remove any existing modal.
         $('#mastermind-course-preview-overlay').remove();
@@ -649,6 +661,12 @@ function($, Ajax, Notification, AiPolicy, Str) {
                             sectionsHtml +
                         '</div>' +
                     '</div>' +
+                    '<div class="mastermind-refine-bar">' +
+                        '<textarea id="mastermind-course-refine-feedback" class="mastermind-refine-textarea" rows="2"' +
+                            ' placeholder="Tell the assistant what to change or add context..."></textarea>' +
+                        '<button class="mastermind-secondary-button mastermind-refine-btn"' +
+                            ' id="mastermind-course-refine-btn">Regenerate &mdash; uses 1 course creation action</button>' +
+                    '</div>' +
                     '<div class="mastermind-preview-footer">' +
                         '<button class="mastermind-secondary-button mastermind-preview-btn"' +
                             ' id="mastermind-course-preview-cancel">Cancel</button>' +
@@ -692,6 +710,127 @@ function($, Ajax, Notification, AiPolicy, Str) {
         // Create button.
         $('#mastermind-course-preview-create').on('click', function() {
             confirmCourseCreation();
+        });
+
+        // Refinement bar: localized strings + regenerate handler.
+        Str.get_strings([
+            {key: 'refine_placeholder', component: 'block_mastermind_assistant'},
+            {key: 'refine_course_button', component: 'block_mastermind_assistant'}
+        ]).then(function(strings) {
+            $('#mastermind-course-refine-feedback').attr('placeholder', strings[0]);
+            $('#mastermind-course-refine-btn').text(strings[1]);
+            return strings;
+        }).catch(function() {
+            // Keep English fallbacks.
+        });
+
+        $('#mastermind-course-refine-btn').on('click', function(e) {
+            e.preventDefault();
+            refineCoursePreview();
+        });
+    }
+
+    /**
+     * Send the user's refinement feedback to the dashboard and re-render the
+     * preview modal with the refined structure. Billed as one course creation
+     * action. The course is only created when the Create button is clicked.
+     */
+    function refineCoursePreview() {
+        if (!pendingStructure) {
+            return;
+        }
+
+        var $textarea = $('#mastermind-course-refine-feedback');
+        var $refineBtn = $('#mastermind-course-refine-btn');
+        var feedback = ($textarea.val() || '').trim();
+        if (!feedback) {
+            return;
+        }
+
+        // Existing loading pattern: disable inputs, show processing label.
+        var originalLabel = $refineBtn.html();
+        $textarea.prop('disabled', true);
+        $refineBtn.prop('disabled', true);
+        $('#mastermind-course-preview-create').prop('disabled', true);
+        Str.get_string('processing', 'block_mastermind_assistant').then(function(s) {
+            $refineBtn.text(s);
+            return s;
+        }).catch(function() {
+            $refineBtn.text('Processing...');
+        });
+
+        var payload = {
+            // eslint-disable-next-line camelcase
+            course_name: pendingStructure.course_name || '',
+            // eslint-disable-next-line camelcase
+            previous_result: pendingStructure,
+            conversation: refineConversation,
+            feedback: feedback
+        };
+
+        Ajax.call([{
+            methodname: 'block_mastermind_assistant_refine_course',
+            args: {payload: JSON.stringify(payload)},
+            timeout: 600000,
+            done: function(response) {
+                if (response.success && response.preview) {
+                    var refined = JSON.parse(response.preview);
+                    appendCourseRefineConversation(feedback, refined);
+                    // Re-render the modal with the refined structure; the
+                    // Create button always applies the displayed structure.
+                    showCoursePreviewModal(refined, true);
+                } else {
+                    showCourseRefineError(response.error);
+                    $textarea.prop('disabled', false);
+                    $refineBtn.prop('disabled', false).html(originalLabel);
+                    $('#mastermind-course-preview-create').prop('disabled', false);
+                }
+            },
+            fail: function(error) {
+                showCourseRefineError(error && error.message);
+                $textarea.prop('disabled', false);
+                $refineBtn.prop('disabled', false).html(originalLabel);
+                $('#mastermind-course-preview-create').prop('disabled', false);
+            }
+        }]);
+    }
+
+    /**
+     * Append a user/assistant exchange to the refinement conversation,
+     * capping it at MAX_CONVERSATION_ENTRIES by dropping the oldest pairs.
+     *
+     * @param {string} feedback The user's refinement feedback
+     * @param {object} structure The refined course structure
+     */
+    function appendCourseRefineConversation(feedback, structure) {
+        refineConversation.push({role: 'user', content: feedback});
+        refineConversation.push({
+            role: 'assistant',
+            // Compact summary: course name + section names only.
+            content: JSON.stringify({
+                // eslint-disable-next-line camelcase
+                course_name: structure.course_name || '',
+                sections: (structure.sections || []).map(function(s) {
+                    return s.section_name || '';
+                })
+            }).substring(0, 2000)
+        });
+        while (refineConversation.length > MAX_CONVERSATION_ENTRIES) {
+            refineConversation.splice(0, 2);
+        }
+    }
+
+    /**
+     * Show a refinement error notification.
+     *
+     * @param {string} detail Optional server-provided error detail
+     */
+    function showCourseRefineError(detail) {
+        Str.get_string('refine_error', 'block_mastermind_assistant').then(function(s) {
+            Notification.alert('Error', detail ? s + ' (' + detail + ')' : s, 'OK');
+            return s;
+        }).catch(function() {
+            Notification.alert('Error', detail || 'Could not refine the result. Please try again.', 'OK');
         });
     }
 

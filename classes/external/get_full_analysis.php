@@ -135,7 +135,7 @@ class get_full_analysis extends external_api {
      * @param array $response API response payload.
      * @return string Recommendations as a string.
      */
-    private static function extract_recommendations(array $response): string {
+    public static function extract_recommendations(array $response): string {
         $rec = $response;
         if (isset($response['recommendations'])) {
             $rec = $response['recommendations'];
@@ -153,7 +153,7 @@ class get_full_analysis extends external_api {
      * @param array $response API response payload.
      * @return string Structure encoded as a JSON string.
      */
-    private static function extract_structure(array $response): string {
+    public static function extract_structure(array $response): string {
         $structure = $response;
         if (isset($response['structure']) && is_array($response['structure'])) {
             $structure = $response['structure'];

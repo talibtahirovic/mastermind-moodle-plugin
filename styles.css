@@ -2645,3 +2645,81 @@
     font-size: 12px;
     color: #6b7280;
 }
+
+/* ===== Refinement Bar (AI results modal — dark theme) ===== */
+.ai-refine-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: #2d3748;
+    flex-shrink: 0;
+}
+
+.ai-refine-textarea {
+    flex: 1;
+    resize: vertical;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background: #1a202c;
+    color: #e2e8f0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.ai-refine-textarea::placeholder {
+    color: #718096;
+}
+
+.ai-refine-btn {
+    align-self: center;
+    white-space: nowrap;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ai-refine-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ===== Refinement Bar (course preview modal — light theme) ===== */
+.mastermind-refine-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px 24px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
+.mastermind-refine-textarea {
+    flex: 1;
+    resize: vertical;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e0;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.mastermind-refine-btn {
+    align-self: center;
+    white-space: nowrap;
+}
+
+.mastermind-refine-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
