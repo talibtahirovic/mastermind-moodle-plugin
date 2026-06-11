@@ -1,0 +1,107 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_mastermind_assistant/report_builder
+
+    AI Report Builder card shown on course report pages, plus the
+    (initially hidden) two-pane modal shell: result area on the left,
+    chat/refinement panel on the right.
+
+    Context variables required for this template:
+    * courseid - Course ID
+
+    Example context (json):
+    {
+        "courseid": 12
+    }
+}}
+
+<div class="mastermind-mod-draft-container mastermind-report-card">
+    <div class="mastermind-mod-draft-header">
+        <svg class="mastermind-mod-draft-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 3V21H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 14L11 10L14 13L20 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3 class="mastermind-mod-draft-title">{{#str}} report_builder_title, block_mastermind_assistant {{/str}}</h3>
+    </div>
+
+    <div class="mastermind-mod-draft-intro">
+        <p class="mastermind-mod-draft-text">{{#str}} report_card_text, block_mastermind_assistant {{/str}}</p>
+    </div>
+
+    <button id="mastermind-report-open-btn" class="mastermind-action-button" data-courseid="{{courseid}}">
+        <svg class="mastermind-button-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor"/>
+        </svg>
+        <span>{{#str}} report_draft_button, block_mastermind_assistant {{/str}}</span>
+    </button>
+</div>
+
+{{! Report builder modal — results are rendered by the AMD module. }}
+<div id="report-builder-modal" class="mastermind-preview-overlay" style="display:none;">
+    <div class="mastermind-preview-modal mastermind-preview-modal-wide">
+        <div class="mastermind-preview-header">
+            <h3 class="mastermind-preview-title">{{#str}} report_builder_title, block_mastermind_assistant {{/str}}</h3>
+            <button id="report-builder-close-btn" class="mastermind-close-modal-btn" aria-label="Close">&times;</button>
+        </div>
+        <div class="mastermind-preview-body">
+            <div class="mastermind-preview-main">
+                <div id="report-builder-examples">
+                    <p class="mastermind-mod-draft-text">{{#str}} report_examples_intro, block_mastermind_assistant {{/str}}</p>
+                    <button type="button" class="mastermind-report-example">{{#str}} report_example_1, block_mastermind_assistant {{/str}}</button>
+                    <button type="button" class="mastermind-report-example">{{#str}} report_example_2, block_mastermind_assistant {{/str}}</button>
+                    <button type="button" class="mastermind-report-example">{{#str}} report_example_3, block_mastermind_assistant {{/str}}</button>
+                </div>
+                <div id="report-builder-output" style="display:none;">
+                    <h4 id="report-builder-output-title" class="mastermind-report-output-title"></h4>
+                    <p id="report-builder-output-explanation" class="mastermind-mod-draft-text"></p>
+                    <div id="report-builder-table-wrap" class="mastermind-report-table-wrap"></div>
+                    <p id="report-builder-rowcount" class="mastermind-report-rowcount"></p>
+                    <div id="report-builder-downloads" class="mastermind-report-downloads" style="display:none;">
+                        <span>{{#str}} report_download_label, block_mastermind_assistant {{/str}}</span>
+                        <button type="button" class="mastermind-secondary-button mastermind-report-download-btn" data-format="xlsx">
+                            {{#str}} report_download_xlsx, block_mastermind_assistant {{/str}}
+                        </button>
+                        <button type="button" class="mastermind-secondary-button mastermind-report-download-btn" data-format="csv">
+                            {{#str}} report_download_csv, block_mastermind_assistant {{/str}}
+                        </button>
+                        <button type="button" class="mastermind-secondary-button mastermind-report-download-btn" data-format="pdf">
+                            {{#str}} report_download_pdf, block_mastermind_assistant {{/str}}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mastermind-preview-sidebar mastermind-report-chat">
+                <div id="report-builder-history" class="mastermind-report-history" aria-live="polite"></div>
+                <textarea id="report-builder-input" class="mastermind-refine-textarea mastermind-report-input"
+                          rows="3" placeholder="{{#str}} report_input_placeholder, block_mastermind_assistant {{/str}}"></textarea>
+                <button id="report-builder-generate-btn" class="mastermind-action-button mastermind-report-generate-btn" type="button">
+                    {{#str}} report_generate_button, block_mastermind_assistant {{/str}}
+                </button>
+                <p class="mastermind-report-footnote">
+                    <small>{{#str}} report_footnote, block_mastermind_assistant {{/str}}
+                        {{#str}} report_disclaimer, block_mastermind_assistant {{/str}}</small>
+                </p>
+            </div>
+        </div>
+        <div class="mastermind-preview-footer">
+            <button id="report-builder-cancel-btn" class="mastermind-secondary-button mastermind-preview-btn">
+                {{#str}} report_close, block_mastermind_assistant {{/str}}
+            </button>
+        </div>
+    </div>
+</div>

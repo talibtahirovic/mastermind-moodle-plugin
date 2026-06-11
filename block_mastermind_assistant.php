@@ -46,6 +46,8 @@ class block_mastermind_assistant extends block_base {
             $this->title = get_string('pluginname', 'block_mastermind_assistant');
         } else if ($this->get_grading_page_kind() !== '') {
             $this->title = get_string('grading_assist_title', 'block_mastermind_assistant');
+        } else if ($this->is_course_report_page()) {
+            $this->title = get_string('report_builder_title', 'block_mastermind_assistant');
         } else if ($this->is_mod_edit_page()) {
             $this->title = get_string('ai_content_assistant', 'block_mastermind_assistant');
         } else {
@@ -119,6 +121,12 @@ class block_mastermind_assistant extends block_base {
         $gradingkind = $this->get_grading_page_kind();
         if ($gradingkind !== '') {
             return $this->get_grading_assist_content($gradingkind);
+        }
+
+        // Course report pages (outline, log, participation, completion, ...)
+        // and the course reports index get the AI report builder card.
+        if ($this->is_course_report_page()) {
+            return $this->get_report_builder_content();
         }
 
         // Check if we're on a supported mod page — show AI assistant.
@@ -285,6 +293,71 @@ class block_mastermind_assistant extends block_base {
             ->render_from_template('block_mastermind_assistant/grading_assist', $data);
 
         $this->page->requires->js_call_amd('block_mastermind_assistant/grading_assist', 'init', [$cmid, $kind]);
+
+        return $this->content;
+    }
+
+    /**
+     * Detect course report pages.
+     *
+     * Course report pages (/report/outline/index.php, /report/log/index.php,
+     * ...) get path-derived page types starting with 'report-'. The course
+     * reports index (/report/view.php) sets pagetype 'course-view-{format}',
+     * so it is matched by URL instead. Only inside a real course.
+     *
+     * @return bool
+     */
+    protected function is_course_report_page(): bool {
+        global $COURSE;
+
+        if (empty($COURSE) || $COURSE->id == SITEID) {
+            return false;
+        }
+
+        $pagetype = $this->page->pagetype;
+        if (strpos($pagetype, 'report-') === 0 || $pagetype === 'course-report') {
+            return true;
+        }
+
+        $pageurl = '';
+        if ($this->page->has_set_url()) {
+            $pageurl = $this->page->url->out_as_local_url(false);
+        }
+
+        return (strpos($pageurl, '/report/view.php') !== false);
+    }
+
+    /**
+     * Render the AI Report Builder card on course report pages.
+     *
+     * Requires the block view capability and moodle/site:viewreports (the
+     * same gate the generate/export endpoints enforce server-side); the
+     * report pages themselves already enforce their own report capabilities.
+     *
+     * @return stdClass
+     */
+    protected function get_report_builder_content(): stdClass {
+        global $COURSE;
+
+        $this->content->text = '';
+        $this->content->footer = '';
+
+        $context = context_course::instance($COURSE->id);
+        if (
+            !has_capability('block/mastermind_assistant:view', $context) ||
+            !has_capability('moodle/site:viewreports', $context)
+        ) {
+            return $this->content;
+        }
+
+        $data = (object) [
+            'courseid' => $COURSE->id,
+        ];
+
+        $this->content->text = $this->page->get_renderer('block_mastermind_assistant')
+            ->render_from_template('block_mastermind_assistant/report_builder', $data);
+
+        $this->page->requires->js_call_amd('block_mastermind_assistant/report_builder', 'init', [$COURSE->id]);
 
         return $this->content;
     }

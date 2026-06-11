@@ -2795,3 +2795,135 @@
     margin-top: 8px;
     color: #718096;
 }
+
+/* ─── AI report builder ─────────────────────────────────────────────── */
+
+.mastermind-report-example {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin: 8px 0;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e0;
+    border-radius: 8px;
+    background: #f7fafc;
+    color: #2d3748;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.mastermind-report-example:hover {
+    background: #edf2f7;
+    border-color: #a0aec0;
+}
+
+.mastermind-report-output-title {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.mastermind-report-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.mastermind-report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.mastermind-report-table th,
+.mastermind-report-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.mastermind-report-table th {
+    background: #f7fafc;
+    font-weight: 600;
+    color: #4a5568;
+    position: sticky;
+    top: 0;
+}
+
+.mastermind-report-rowcount {
+    margin: 8px 0;
+    font-size: 13px;
+    color: #718096;
+}
+
+.mastermind-report-empty {
+    padding: 16px;
+    color: #718096;
+}
+
+.mastermind-report-downloads {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #4a5568;
+}
+
+.mastermind-report-chat {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mastermind-report-history {
+    flex: 1;
+    min-height: 80px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mastermind-report-msg {
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.45;
+    max-width: 95%;
+    word-break: break-word;
+}
+
+.mastermind-report-msg-user {
+    align-self: flex-end;
+    background: #2d3748;
+    color: #fff;
+}
+
+.mastermind-report-msg-assistant {
+    align-self: flex-start;
+    background: #edf2f7;
+    color: #2d3748;
+}
+
+.mastermind-report-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.mastermind-report-generate-btn {
+    width: 100%;
+}
+
+.mastermind-report-generate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.mastermind-report-footnote {
+    margin: 0;
+    color: #718096;
+}
