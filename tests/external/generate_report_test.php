@@ -234,7 +234,7 @@ final class generate_report_test extends \advanced_testcase {
 
         $response = $this->valid_dashboard_response();
         // Passes the validator but references a column that does not exist.
-        $response['sql'] = 'SELECT nosuchcolumn FROM {user} WHERE id = :courseid';
+        $response['sql'] = 'SELECT nosuchcolumn FROM {course} WHERE id = :courseid';
 
         $processed = generate_report::process_dashboard_response($response, (int) $course->id);
 
@@ -304,7 +304,7 @@ final class generate_report_test extends \advanced_testcase {
 
         // Validator-clean SQL that fails at execution time.
         $badresponse = $this->valid_dashboard_response();
-        $badresponse['sql'] = 'SELECT nosuchcolumn FROM {user} WHERE id = :courseid';
+        $badresponse['sql'] = 'SELECT nosuchcolumn FROM {course} WHERE id = :courseid';
 
         $calls = [];
         $goodresponse = $this->valid_dashboard_response();

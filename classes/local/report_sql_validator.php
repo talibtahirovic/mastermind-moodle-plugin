@@ -80,6 +80,48 @@ class report_sql_validator {
     ];
 
     /**
+     * Course-scoped tables that anchor {user} data to a single course.
+     *
+     * Any statement referencing {user} must also reference at least one of
+     * these enrolment/activity tables, otherwise the :courseid filter cannot
+     * actually scope the user rows and the query becomes a site-wide pull.
+     *
+     * @var string[]
+     */
+    public const COURSE_SCOPED_TABLES = [
+        'user_enrolments',
+        'role_assignments',
+        'grade_grades',
+        'course_completions',
+        'course_modules_completion',
+        'quiz_attempts',
+        'quiz_grades',
+        'assign_submission',
+        'assign_grades',
+        'forum_posts',
+        'forum_discussions',
+        'lesson_attempts',
+        'glossary_entries',
+        'scorm_attempt',
+        'groups_members',
+        'user_lastaccess',
+        'logstore_standard_log',
+    ];
+
+    /**
+     * Literal substrings that reveal a system-catalog or cross-database
+     * reference. Belt-and-braces on top of the FROM/JOIN placeholder rule.
+     *
+     * @var string[]
+     */
+    public const DENIED_SCHEMAS = [
+        'information_schema',
+        'pg_catalog',
+        'pg_',
+        'mysql.',
+    ];
+
+    /**
      * Keywords that must not appear anywhere in the statement (word-boundary).
      *
      * UNION is denied too (MVP): it is the classic vehicle for smuggling a
@@ -135,8 +177,12 @@ class report_sql_validator {
             self::check_denied_keywords($sql),
             self::check_table_tokens($sql),
             self::check_raw_prefix($sql),
+            self::check_denied_schemas($sql),
+            self::check_from_join_placeholder($sql),
             self::check_denied_columns($sql),
             self::check_courseid_param($sql),
+            self::check_courseid_comparison($sql),
+            self::check_user_course_scope($sql),
         ];
 
         foreach ($checks as $reason) {
@@ -238,6 +284,41 @@ class report_sql_validator {
     }
 
     /**
+     * System catalogs and cross-database references are denied outright,
+     * regardless of where they appear in the statement.
+     *
+     * @param string $sql Candidate SQL.
+     * @return string|null Rejection reason, or null when the check passes.
+     */
+    public static function check_denied_schemas(string $sql): ?string {
+        foreach (self::DENIED_SCHEMAS as $schema) {
+            if (stripos($sql, $schema) !== false) {
+                return 'Statement references a forbidden schema: ' . $schema;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Every FROM and JOIN must be immediately followed by an allow-listed
+     * {placeholder} table.
+     *
+     * One structural rule forbids derived tables 'FROM (', bare table names
+     * 'FROM user' and schema-qualified names 'FROM information_schema.tables'
+     * at once: the only valid target after FROM/JOIN is a placeholder, and
+     * check_table_tokens() already pins every placeholder to the allow-list.
+     *
+     * @param string $sql Candidate SQL.
+     * @return string|null Rejection reason, or null when the check passes.
+     */
+    public static function check_from_join_placeholder(string $sql): ?string {
+        if (preg_match('/\b(?:from|join)\b(?!\s*\{)/i', $sql)) {
+            return 'Every FROM/JOIN must reference an allow-listed {placeholder} table';
+        }
+        return null;
+    }
+
+    /**
      * Sensitive column names must not appear (leading word boundary, so
      * plural forms such as 'tokens' are rejected too).
      *
@@ -265,5 +346,53 @@ class report_sql_validator {
             return 'Statement must filter by the :courseid named parameter';
         }
         return null;
+    }
+
+    /**
+     * The :courseid parameter must be used in a comparison context — an
+     * equality on either side or as an IN(...) member.
+     *
+     * Presence alone is not enough: 'WHERE :courseid > 0' is always true and
+     * leaves the query site-wide. This is best-effort static scoping; the
+     * parameter is still bound server-side from the validated course context.
+     *
+     * @param string $sql Candidate SQL.
+     * @return string|null Rejection reason, or null when the check passes.
+     */
+    public static function check_courseid_comparison(string $sql): ?string {
+        $patterns = [
+            '/=\s*:courseid\b/i',
+            '/:courseid\s*=/i',
+            '/\bin\s*\(\s*:courseid\b/i',
+        ];
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $sql)) {
+                return null;
+            }
+        }
+        return 'courseid must be used in an equality filter';
+    }
+
+    /**
+     * Statements touching {user} must also reference a course-scoped
+     * enrolment or activity table.
+     *
+     * Without such a join the :courseid filter cannot restrict the user rows
+     * ('SELECT email FROM {user} WHERE c.id = :courseid' is a site-wide
+     * pull), so at least one COURSE_SCOPED_TABLES placeholder is required.
+     *
+     * @param string $sql Candidate SQL.
+     * @return string|null Rejection reason, or null when the check passes.
+     */
+    public static function check_user_course_scope(string $sql): ?string {
+        if (strpos($sql, '{user}') === false) {
+            return null;
+        }
+        foreach (self::COURSE_SCOPED_TABLES as $table) {
+            if (strpos($sql, '{' . $table . '}') !== false) {
+                return null;
+            }
+        }
+        return 'user data must be joined through course-scoped enrolment or activity tables';
     }
 }

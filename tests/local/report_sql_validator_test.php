@@ -67,13 +67,34 @@ final class report_sql_validator_test extends \advanced_testcase {
                 'SELECT id, fullname FROM {course} WHERE id = :courseid LIMIT 100',
             ],
             'alias created does not trip CREATE' => [
-                'SELECT u.id, u.timecreated AS created FROM {user} u WHERE u.id = :courseid',
+                'SELECT u.id, u.timecreated AS created
+                   FROM {user} u
+                   JOIN {user_enrolments} ue ON ue.userid = u.id
+                   JOIN {enrol} e ON e.id = ue.enrolid
+                  WHERE e.courseid = :courseid',
             ],
             'alias minto does not trip INTO' => [
                 'SELECT gg.finalgrade AS minto FROM {grade_grades} gg WHERE gg.itemid = :courseid',
             ],
             'deleted column does not trip DELETE' => [
-                'SELECT id FROM {user} WHERE deleted = 0 AND id = :courseid',
+                'SELECT u.id
+                   FROM {user} u
+                   JOIN {user_enrolments} ue ON ue.userid = u.id
+                   JOIN {enrol} e ON e.id = ue.enrolid
+                  WHERE e.courseid = :courseid AND u.deleted = 0',
+            ],
+            'enrolled students roster' => [
+                'SELECT u.firstname, u.lastname
+                   FROM {user} u
+                   JOIN {user_enrolments} ue ON ue.userid = u.id
+                   JOIN {enrol} e ON e.id = ue.enrolid
+                  WHERE e.courseid = :courseid',
+            ],
+            'courseid on the left of the equality' => [
+                'SELECT c.fullname FROM {course} c WHERE :courseid = c.id',
+            ],
+            'courseid as an IN member' => [
+                'SELECT c.fullname FROM {course} c WHERE c.id IN (:courseid)',
             ],
             'scorm 4.3+ attempt/value tables' => [
                 'SELECT u.id, u.firstname, sv.value
@@ -199,6 +220,34 @@ final class report_sql_validator_test extends \advanced_testcase {
             'plural tokens still rejected (conservative)' => [
                 "SELECT firstname AS tokens FROM {user} WHERE id = :courseid", 'token',
             ],
+            'information_schema exploit' => [
+                'SELECT table_name FROM information_schema.tables WHERE :courseid > 0', 'information_schema',
+            ],
+            'mysql system database exploit' => [
+                'SELECT user, host FROM mysql.user WHERE :courseid > 0', 'mysql.',
+            ],
+            'pg_catalog exploit' => [
+                'SELECT rolname FROM pg_catalog.pg_authid WHERE :courseid > 0', 'pg_catalog',
+            ],
+            'derived table after FROM' => [
+                'SELECT x.id FROM (SELECT id FROM {course}) x WHERE x.id = :courseid', '{placeholder}',
+            ],
+            'bare table name after FROM' => [
+                'SELECT email FROM user WHERE id = :courseid', '{placeholder}',
+            ],
+            'bare table name after JOIN' => [
+                'SELECT c.id FROM {course} c JOIN course_dupe d ON d.id = c.id WHERE c.id = :courseid',
+                '{placeholder}',
+            ],
+            'courseid present but never compared (two rules violated)' => [
+                'SELECT firstname, lastname, email FROM {user} WHERE :courseid > 0', 'equality filter',
+            ],
+            'courseid only in the SELECT list' => [
+                'SELECT email, :courseid AS cid FROM {user}', 'equality filter',
+            ],
+            '{user} compared to courseid but no course-scoped join' => [
+                'SELECT u.email FROM {user} u WHERE u.id = :courseid', 'course-scoped',
+            ],
         ];
     }
 
@@ -235,11 +284,37 @@ final class report_sql_validator_test extends \advanced_testcase {
         $this->assertNull(report_sql_validator::check_raw_prefix('SELECT id FROM {user}'));
         $this->assertNotNull(report_sql_validator::check_raw_prefix('SELECT id FROM MDL_USER'));
 
+        $this->assertNull(report_sql_validator::check_denied_schemas('SELECT id FROM {user}'));
+        $this->assertNotNull(report_sql_validator::check_denied_schemas('SELECT 1 FROM INFORMATION_SCHEMA.TABLES'));
+        $this->assertNotNull(report_sql_validator::check_denied_schemas('SELECT 1 FROM pg_catalog.pg_authid'));
+        $this->assertNotNull(report_sql_validator::check_denied_schemas('SELECT 1 FROM PG_SHADOW'));
+        $this->assertNotNull(report_sql_validator::check_denied_schemas('SELECT 1 FROM mysql.user'));
+
+        $this->assertNull(report_sql_validator::check_from_join_placeholder('SELECT id FROM {user}'));
+        $this->assertNull(report_sql_validator::check_from_join_placeholder("SELECT id\nFROM\n{user}"));
+        $this->assertNotNull(report_sql_validator::check_from_join_placeholder('SELECT id FROM user'));
+        $this->assertNotNull(report_sql_validator::check_from_join_placeholder('SELECT id FROM (SELECT 1) x'));
+        $this->assertNotNull(report_sql_validator::check_from_join_placeholder(
+            'SELECT id FROM {user} u JOIN other o ON o.id = u.id'
+        ));
+
         $this->assertNull(report_sql_validator::check_denied_columns('SELECT firstname FROM {user}'));
         $this->assertNotNull(report_sql_validator::check_denied_columns('SELECT PASSWORD FROM {user}'));
 
         $this->assertNull(report_sql_validator::check_courseid_param('WHERE c.id = :courseid'));
         $this->assertNotNull(report_sql_validator::check_courseid_param('WHERE c.id = 1'));
+
+        $this->assertNull(report_sql_validator::check_courseid_comparison('WHERE c.id = :courseid'));
+        $this->assertNull(report_sql_validator::check_courseid_comparison('WHERE :courseid = c.id'));
+        $this->assertNull(report_sql_validator::check_courseid_comparison('WHERE c.id IN (:courseid)'));
+        $this->assertNotNull(report_sql_validator::check_courseid_comparison('WHERE :courseid > 0'));
+        $this->assertNotNull(report_sql_validator::check_courseid_comparison('SELECT :courseid AS cid'));
+
+        $this->assertNull(report_sql_validator::check_user_course_scope('SELECT id FROM {course}'));
+        $this->assertNull(report_sql_validator::check_user_course_scope(
+            'SELECT u.id FROM {user} u JOIN {user_enrolments} ue ON ue.userid = u.id'
+        ));
+        $this->assertNotNull(report_sql_validator::check_user_course_scope('SELECT email FROM {user}'));
     }
 
     /**
@@ -248,7 +323,15 @@ final class report_sql_validator_test extends \advanced_testcase {
     public function test_all_allow_listed_tables_accepted(): void {
         $this->assertCount(35, report_sql_validator::ALLOWED_TABLES);
         foreach (report_sql_validator::ALLOWED_TABLES as $table) {
-            $sql = 'SELECT id FROM {' . $table . '} WHERE id = :courseid';
+            if ($table === 'user') {
+                // The {user} table additionally requires a course-scoped join.
+                $sql = 'SELECT u.id FROM {user} u'
+                    . ' JOIN {user_enrolments} ue ON ue.userid = u.id'
+                    . ' JOIN {enrol} e ON e.id = ue.enrolid'
+                    . ' WHERE e.courseid = :courseid';
+            } else {
+                $sql = 'SELECT id FROM {' . $table . '} WHERE id = :courseid';
+            }
             $result = report_sql_validator::validate($sql);
             $this->assertTrue($result['ok'], '{' . $table . '} should be allowed: ' . ($result['reason'] ?? ''));
         }
@@ -257,5 +340,17 @@ final class report_sql_validator_test extends \advanced_testcase {
         $this->assertNotContains('external_tokens', report_sql_validator::ALLOWED_TABLES);
         // Removed in Moodle 4.3 — replaced by scorm_attempt/scorm_scoes_value.
         $this->assertNotContains('scorm_scoes_track', report_sql_validator::ALLOWED_TABLES);
+    }
+
+    /**
+     * Every course-scoped anchor table must itself be on the allow-list,
+     * otherwise satisfying the {user} scoping rule would be impossible.
+     */
+    public function test_course_scoped_tables_are_allow_listed(): void {
+        foreach (report_sql_validator::COURSE_SCOPED_TABLES as $table) {
+            $this->assertContains($table, report_sql_validator::ALLOWED_TABLES);
+        }
+        $this->assertNotContains('user', report_sql_validator::COURSE_SCOPED_TABLES);
+        $this->assertNotContains('course', report_sql_validator::COURSE_SCOPED_TABLES);
     }
 }
