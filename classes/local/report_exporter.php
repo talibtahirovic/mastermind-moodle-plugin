@@ -57,7 +57,11 @@ class report_exporter {
             throw new \invalid_parameter_exception('Report SQL rejected: ' . $verdict['reason']);
         }
 
-        $records = $DB->get_records_sql($sql, ['courseid' => $courseid], 0, self::MAX_ROWS);
+        // Execution-time only: rewrite repeated :courseid occurrences into
+        // unique names (Moodle's DML forbids reusing a named param). The
+        // validator above always saw the original statement.
+        [$execsql, $execparams] = report_sql_validator::prepare_courseid_bindings($sql, $courseid);
+        $records = $DB->get_records_sql($execsql, $execparams, 0, self::MAX_ROWS);
 
         $columns = [];
         $rows = [];

@@ -198,6 +198,36 @@ final class generate_report_test extends \advanced_testcase {
         $this->assertSame($this->valid_dashboard_response()['sql'], $data['sql']);
     }
 
+    public function test_process_dashboard_response_executes_sql_with_repeated_courseid(): void {
+        $this->resetAfterTest();
+        [$course, $teacher, $student] = $this->create_environment();
+
+        // LLM-generated multi-join reports often filter by course in more
+        // than one place. Moodle's DML forbids reusing one named parameter,
+        // so execution must rewrite the repeats — while the validator and
+        // the echoed export SQL keep the original :courseid statement.
+        $response = $this->valid_dashboard_response();
+        $response['sql'] = 'SELECT u.id, u.firstname
+                              FROM {user} u
+                              JOIN {user_enrolments} ue ON ue.userid = u.id
+                              JOIN {enrol} e ON e.id = ue.enrolid AND e.courseid = :courseid
+                              JOIN {course} c ON c.id = :courseid
+                             WHERE u.deleted = 0
+                          ORDER BY u.id ASC';
+
+        $processed = generate_report::process_dashboard_response($response, (int) $course->id);
+
+        $this->assertTrue($processed['ok'], $processed['error']);
+        $this->assertSame(2, $processed['data']['total_rows']);
+        $this->assertSame((string) $teacher->id, $processed['data']['rows'][0][0]);
+        $this->assertSame('Ada', $processed['data']['rows'][1][1]);
+        $this->assertSame((string) $student->id, $processed['data']['rows'][1][0]);
+        // The ORIGINAL SQL (plain :courseid) is echoed back for the export
+        // buttons — the rewrite is an execution-time detail only.
+        $this->assertSame($response['sql'], $processed['data']['sql']);
+        $this->assertStringNotContainsString(':courseid0', $processed['data']['sql']);
+    }
+
     public function test_process_dashboard_response_falls_back_to_row_keys(): void {
         $this->resetAfterTest();
         [$course] = $this->create_environment();

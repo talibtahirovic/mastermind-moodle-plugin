@@ -112,4 +112,32 @@ final class report_exporter_test extends \advanced_testcase {
         // All cell values are plain strings, ready for any writer.
         $this->assertContainsOnly('string', $rows[0]);
     }
+
+    /**
+     * SQL filtering by course in several places (repeated :courseid) still
+     * exports: the exporter rewrites the repeated parameter at execution
+     * time, since Moodle's DML forbids reusing one named parameter.
+     */
+    public function test_prepare_executes_sql_with_repeated_courseid(): void {
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+
+        $student = $generator->create_user(['firstname' => 'Ada']);
+        $generator->enrol_user($student->id, $course->id, 'student');
+
+        $sql = 'SELECT u.id, u.firstname
+                  FROM {user} u
+                  JOIN {user_enrolments} ue ON ue.userid = u.id
+                  JOIN {enrol} e ON e.id = ue.enrolid AND e.courseid = :courseid
+                  JOIN {course} c ON c.id = :courseid
+                 WHERE u.deleted = 0
+              ORDER BY u.id ASC';
+
+        [$columns, $rows] = report_exporter::prepare($sql, (int) $course->id);
+
+        $this->assertSame(['id' => 'id', 'firstname' => 'firstname'], $columns);
+        $this->assertCount(1, $rows);
+        $this->assertSame('Ada', $rows[0]['firstname']);
+    }
 }

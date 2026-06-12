@@ -737,17 +737,6 @@ function(Ajax, Notification, Str, AiPolicy) {
 
                 html += '</div>';
 
-        // Add Apply button
-        html += '<div class="apply-structure-container">';
-        html += '<h6>Ready to Transform Your Course?</h6>';
-        html += '<p>Click below to apply these AI recommendations to your actual course structure.</p>';
-        html += '<button id="apply-course-structure" class="apply-structure-btn">';
-        html += 'Apply Course Structure Changes';
-        html += '</button>';
-        html += '</div>';
-
-        html += '</div>';
-
         container.innerHTML = html;
 
         // Event delegation for section toggle headers (bound once per
@@ -770,13 +759,45 @@ function(Ajax, Notification, Str, AiPolicy) {
             });
         }
 
-        // Event listener for Apply button
-        var applyButton = document.getElementById('apply-course-structure');
-        if (applyButton) {
-            applyButton.addEventListener('click', function() {
-                applyCourseStructureChanges(structureText);
-            });
+        // (Re)create the Apply button in the refinement bar so its click
+        // handler always closes over the currently displayed structure.
+        renderApplyButton(structureText);
+    }
+
+    /**
+     * (Re)create the Apply button in the results modal's refinement bar.
+     *
+     * The button lives on the same row as the Regenerate button (after it).
+     * It is rebuilt on every structure render — including refinement
+     * re-renders — so the click handler always applies the structure text
+     * that is currently displayed in the modal.
+     *
+     * @param {string} structureText Raw structure text currently displayed
+     */
+    function renderApplyButton(structureText) {
+        var modal = document.getElementById('ai-results-modal');
+        if (!modal) {
+            return;
         }
+        var refineBar = modal.querySelector('.ai-refine-bar');
+        if (!refineBar) {
+            return;
+        }
+
+        // Drop any previous button (and its stale closure) before re-adding.
+        var existing = document.getElementById('apply-course-structure');
+        if (existing) {
+            existing.remove();
+        }
+
+        var applyButton = document.createElement('button');
+        applyButton.id = 'apply-course-structure';
+        applyButton.className = 'apply-structure-btn';
+        applyButton.innerHTML = 'Apply Course Structure Changes';
+        applyButton.addEventListener('click', function() {
+            applyCourseStructureChanges(structureText);
+        });
+        refineBar.appendChild(applyButton);
     }
 
             /**
@@ -1000,14 +1021,35 @@ function(Ajax, Notification, Str, AiPolicy) {
                 var confirmMessage = 'Are you sure you want to apply these changes to your course structure? '
                     + 'This will modify your actual course and cannot be easily undone.';
 
+                // Hide the results modal first: it sits above Moodle's
+                // confirmation dialog and would otherwise cover it.
+                setResultsModalVisible(false);
+
                 Notification.saveCancel(
                     'Apply Course Structure Changes',
                     confirmMessage,
                     'Apply',
                     function() {
                         performApplyCourseStructure(structureText, courseid);
+                    },
+                    function() {
+                        // Cancelled: bring the results modal back.
+                        setResultsModalVisible(true);
                     }
                 ).catch(Notification.exception);
+            }
+
+            /**
+             * Hide or re-show the AI results modal without destroying its
+             * state (used while Moodle confirmation dialogs are on screen).
+             *
+             * @param {boolean} visible Whether the modal should be visible.
+             */
+            function setResultsModalVisible(visible) {
+                var modal = document.getElementById('ai-results-modal');
+                if (modal) {
+                    modal.style.display = visible ? '' : 'none';
+                }
             }
 
             /**
@@ -1061,6 +1103,9 @@ function(Ajax, Notification, Str, AiPolicy) {
                                 applyButton.disabled = false;
                                 applyButton.innerHTML = '✨ Apply Course Structure Changes';
                             }
+                            // Bring the results modal back so the user can
+                            // refine the structure or retry the apply.
+                            setResultsModalVisible(true);
                             return response;
                         }
 
@@ -1099,6 +1144,8 @@ function(Ajax, Notification, Str, AiPolicy) {
                             applyButton.disabled = false;
                             applyButton.innerHTML = '✨ Apply Course Structure Changes';
                         }
+                        // Bring the results modal back so the user can retry.
+                        setResultsModalVisible(true);
                     });
 
                 // Safety timeout to ensure button is never stuck permanently

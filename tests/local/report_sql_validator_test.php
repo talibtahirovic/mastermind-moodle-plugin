@@ -353,4 +353,88 @@ final class report_sql_validator_test extends \advanced_testcase {
         $this->assertNotContains('user', report_sql_validator::COURSE_SCOPED_TABLES);
         $this->assertNotContains('course', report_sql_validator::COURSE_SCOPED_TABLES);
     }
+
+    /**
+     * A single :courseid occurrence is rewritten to :courseid0 with one binding.
+     */
+    public function test_prepare_courseid_bindings_single_occurrence(): void {
+        [$sql, $params] = report_sql_validator::prepare_courseid_bindings(
+            'SELECT id FROM {course} WHERE id = :courseid',
+            7
+        );
+
+        $this->assertSame('SELECT id FROM {course} WHERE id = :courseid0', $sql);
+        $this->assertSame(['courseid0' => 7], $params);
+    }
+
+    /**
+     * Repeated occurrences get unique names so Moodle's DML layer accepts
+     * the statement (it forbids reusing one named parameter).
+     */
+    public function test_prepare_courseid_bindings_multiple_occurrences(): void {
+        $original = 'SELECT u.id'
+            . ' FROM {user} u'
+            . ' JOIN {user_enrolments} ue ON ue.userid = u.id'
+            . ' JOIN {enrol} e ON e.id = ue.enrolid AND e.courseid = :courseid'
+            . ' JOIN {grade_grades} gg ON gg.userid = u.id'
+            . ' JOIN {grade_items} gi ON gi.id = gg.itemid AND gi.courseid = :courseid'
+            . ' WHERE u.deleted = 0 AND :courseid = e.courseid';
+
+        [$sql, $params] = report_sql_validator::prepare_courseid_bindings($original, 42);
+
+        $this->assertStringNotContainsString(':courseid ', $sql . ' ');
+        $this->assertStringContainsString('e.courseid = :courseid0', $sql);
+        $this->assertStringContainsString('gi.courseid = :courseid1', $sql);
+        $this->assertStringContainsString(':courseid2 = e.courseid', $sql);
+        $this->assertSame(['courseid0' => 42, 'courseid1' => 42, 'courseid2' => 42], $params);
+    }
+
+    /**
+     * Occurrences adjacent to punctuation are still rewritten — the word
+     * boundary sits between the parameter name and the punctuation.
+     */
+    public function test_prepare_courseid_bindings_handles_punctuation(): void {
+        [$sql, $params] = report_sql_validator::prepare_courseid_bindings(
+            'SELECT id FROM {course} WHERE (id = :courseid) AND id IN (:courseid,:courseid)',
+            5
+        );
+
+        $this->assertSame(
+            'SELECT id FROM {course} WHERE (id = :courseid0) AND id IN (:courseid1,:courseid2)',
+            $sql
+        );
+        $this->assertSame(['courseid0' => 5, 'courseid1' => 5, 'courseid2' => 5], $params);
+    }
+
+    /**
+     * A dashboard-invented name like :courseid2 is NOT rewritten (no word
+     * boundary after 'courseid'); it fails parameter binding exactly as it
+     * would today, instead of being silently renamed.
+     */
+    public function test_prepare_courseid_bindings_ignores_suffixed_names(): void {
+        [$sql, $params] = report_sql_validator::prepare_courseid_bindings(
+            'SELECT id FROM {course} WHERE id = :courseid AND category = :courseid2',
+            9
+        );
+
+        $this->assertSame(
+            'SELECT id FROM {course} WHERE id = :courseid0 AND category = :courseid2',
+            $sql
+        );
+        $this->assertSame(['courseid0' => 9], $params);
+    }
+
+    /**
+     * No :courseid at all (cannot pass validation, but the helper must be
+     * harmless): the SQL is untouched and the bindings are empty.
+     */
+    public function test_prepare_courseid_bindings_without_occurrences(): void {
+        [$sql, $params] = report_sql_validator::prepare_courseid_bindings(
+            'SELECT id FROM {course} WHERE id = 1',
+            3
+        );
+
+        $this->assertSame('SELECT id FROM {course} WHERE id = 1', $sql);
+        $this->assertSame([], $params);
+    }
 }

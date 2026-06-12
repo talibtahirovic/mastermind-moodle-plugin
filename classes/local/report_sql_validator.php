@@ -374,6 +374,40 @@ class report_sql_validator {
     }
 
     /**
+     * Rewrite every :courseid occurrence into a uniquely named parameter and
+     * build the matching params array for $DB->get_records_sql().
+     *
+     * Moodle's DML layer forbids reusing one named parameter several times in
+     * a single statement, but LLM-generated multi-join reports legitimately
+     * filter by course in more than one place. This helper runs at execution
+     * time only — validation always sees the ORIGINAL statement with the
+     * plain :courseid parameter.
+     *
+     * Only exact ':courseid' tokens (word boundary) are rewritten, mirroring
+     * the comparison check above; a stray ':courseid2' from the dashboard is
+     * left untouched and fails parameter binding exactly as it does today.
+     *
+     * @param string $sql Validated SQL using the :courseid named parameter.
+     * @param int $courseid Server-side validated course id to bind.
+     * @return array [string $sql, array $params] Rewritten SQL and bindings.
+     */
+    public static function prepare_courseid_bindings(string $sql, int $courseid): array {
+        $params = [];
+        $index = 0;
+        $rewritten = preg_replace_callback(
+            '/:courseid\b/',
+            function (array $matches) use (&$params, &$index, $courseid): string {
+                $name = 'courseid' . $index;
+                $params[$name] = $courseid;
+                $index++;
+                return ':' . $name;
+            },
+            $sql
+        );
+        return [$rewritten, $params];
+    }
+
+    /**
      * Statements touching {user} must also reference a course-scoped
      * enrolment or activity table.
      *

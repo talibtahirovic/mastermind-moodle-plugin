@@ -279,6 +279,36 @@ final class grading_assist_test extends \advanced_testcase {
         $this->assert_anonymized($payload);
     }
 
+    public function test_assign_payload_tolerates_empty_intro(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // Assignment with no description at all — the payload must still be
+        // built (no exception), with instructions as an empty string and the
+        // assignment name always present. The generator refuses an empty
+        // intro, so it is blanked directly in the database.
+        [, $assign, $cm, $student] = $this->create_assign_environment();
+        $DB->set_field('assign', 'intro', '', ['id' => $assign->id]);
+        $this->create_onlinetext_submission($cm, $student, '<p>An answer without a question.</p>');
+
+        $submission = $DB->get_record(
+            'assign_submission',
+            ['assignment' => $assign->id, 'userid' => $student->id],
+            '*',
+            MUST_EXIST
+        );
+
+        $payload = grading_assist::build_assign_payload($cm->id, (int) $submission->id);
+
+        $this->assertSame('assignment', $payload['type']);
+        $this->assertSame('Climate essay assignment', $payload['task']['name']);
+        $this->assertArrayHasKey('instructions', $payload['task']);
+        $this->assertSame('', $payload['task']['instructions']);
+        $this->assertStringContainsString('An answer without a question.', $payload['submission_text']);
+        $this->assert_anonymized($payload);
+    }
+
     public function test_quiz_essay_list_and_payload(): void {
         $this->resetAfterTest();
         $this->setAdminUser();

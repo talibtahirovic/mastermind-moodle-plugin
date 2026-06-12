@@ -236,6 +236,11 @@ class grading_assist extends external_api {
      * (PDF/DOCX/TXT up to 10MB) sent base64-encoded. The payload never
      * contains student names, user ids or emails.
      *
+     * The task block always carries the assignment name, and 'instructions'
+     * is always present — as an empty string when the assignment has no
+     * description (the dashboard accepts empty instructions), exactly like
+     * 'rubric' when no advanced grading form is defined.
+     *
      * @param int $cmid Course module ID of the assignment.
      * @param int $submissionid Submission ID (from the 'list' action).
      * @return array Payload for api_client::grading_assist().
@@ -307,8 +312,9 @@ class grading_assist extends external_api {
      * Build the anonymized dashboard payload for one quiz essay question attempt.
      *
      * The task's rubric field carries the question's "Information for graders"
-     * (graderinfo) when present. The payload never contains student names,
-     * user ids or emails.
+     * (graderinfo) when present, and is sent as an empty string when missing —
+     * like 'instructions' for a question without text. The payload never
+     * contains student names, user ids or emails.
      *
      * @param int $cmid Course module ID of the quiz.
      * @param string $itemid Composite "attemptid-slot" identifier.

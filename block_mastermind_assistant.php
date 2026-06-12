@@ -301,9 +301,11 @@ class block_mastermind_assistant extends block_base {
      * Detect course report pages.
      *
      * Course report pages (/report/outline/index.php, /report/log/index.php,
-     * ...) get path-derived page types starting with 'report-'. The course
-     * reports index (/report/view.php) sets pagetype 'course-view-{format}',
-     * so it is matched by URL instead. Only inside a real course.
+     * ...) get path-derived page types starting with 'report-'. Gradebook
+     * report pages (grader report, user report, single view, ...) get page
+     * types starting with 'grade-report-'. The course reports index
+     * (/report/view.php) sets pagetype 'course-view-{format}', so it is
+     * matched by URL instead. Only inside a real course.
      *
      * @return bool
      */
@@ -315,7 +317,11 @@ class block_mastermind_assistant extends block_base {
         }
 
         $pagetype = $this->page->pagetype;
-        if (strpos($pagetype, 'report-') === 0 || $pagetype === 'course-report') {
+        if (
+            strpos($pagetype, 'report-') === 0 ||
+            strpos($pagetype, 'grade-report-') === 0 ||
+            $pagetype === 'course-report'
+        ) {
             return true;
         }
 
