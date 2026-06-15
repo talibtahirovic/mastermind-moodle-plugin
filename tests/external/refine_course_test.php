@@ -109,6 +109,47 @@ final class refine_course_test extends \advanced_testcase {
         $this->assertSame('entry 10', $result['conversation'][7]['content']);
     }
 
+    public function test_return_path_tolerates_refined_shape_variance(): void {
+        // A refined course structure with an EXTRA section, optional keys
+        // omitted, and an activity missing its optional description/status.
+        // normalize_structure() must coerce it into the declared shape so the
+        // encoded preview always parses and clean_returnvalue() never rejects.
+        $refinedstructure = [
+            'course_name' => 'Intro to Marine Biology',
+            'sections' => [
+                [
+                    'section_name' => 'Week 1',
+                    'activities' => [
+                        ['activity_name' => 'Welcome', 'moodle_type' => 'page'],
+                    ],
+                ],
+                [
+                    // Newly added section — every optional key omitted.
+                    'section_name' => 'Coral Reefs',
+                ],
+            ],
+        ];
+
+        $normalized = get_full_analysis::normalize_structure($refinedstructure);
+        $result = [
+            'success' => true,
+            'preview' => json_encode($normalized),
+        ];
+
+        $cleaned = \external_api::clean_returnvalue(refine_course::execute_returns(), $result);
+
+        $this->assertTrue($cleaned['success']);
+        $decoded = json_decode($cleaned['preview'], true);
+        $this->assertCount(2, $decoded['sections']);
+        $this->assertSame('Coral Reefs', $decoded['sections'][1]['section_name']);
+        // Omitted optional keys are filled so the client renderer never chokes.
+        $this->assertSame('NEW', $decoded['sections'][1]['status']);
+        $this->assertSame('', $decoded['sections'][1]['description']);
+        $this->assertSame([], $decoded['sections'][1]['activities']);
+        $this->assertSame('NEW', $decoded['sections'][0]['activities'][0]['status']);
+        $this->assertSame('', $decoded['sections'][0]['activities'][0]['description']);
+    }
+
     public function test_execute_returns_error_for_invalid_payload(): void {
         $this->resetAfterTest();
         $this->setAdminUser();

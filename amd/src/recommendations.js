@@ -507,6 +507,8 @@ function(Ajax, Notification, Str, AiPolicy) {
             feedback: feedback
         };
 
+        clearModalError();
+
         Ajax.call([{
             methodname: 'block_mastermind_assistant_refine_analysis',
             args: {
@@ -519,11 +521,18 @@ function(Ajax, Notification, Str, AiPolicy) {
                 if (!response.success) {
                     showRefineError(response.error);
                 } else {
-                    appendRefineConversation(feedback, response.recommendations);
-                    refineState.recommendations = response.recommendations;
-                    refineState.structure = response.structure;
-                    renderRefinedResults(response.recommendations, response.structure);
-                    textarea.value = '';
+                    // Rendering the refined structure can throw if the AI shape
+                    // varies; surface that inside the modal instead of leaking
+                    // an unhandled rejection ("response could not be handled").
+                    try {
+                        appendRefineConversation(feedback, response.recommendations);
+                        refineState.recommendations = response.recommendations;
+                        refineState.structure = response.structure;
+                        renderRefinedResults(response.recommendations, response.structure);
+                        textarea.value = '';
+                    } catch (renderError) {
+                        showRefineError(renderError && renderError.message);
+                    }
                 }
                 textarea.disabled = false;
                 btn.disabled = false;
@@ -536,6 +545,56 @@ function(Ajax, Notification, Str, AiPolicy) {
                 btn.disabled = false;
                 btn.innerHTML = originalLabel;
             });
+    }
+
+    /**
+     * Show or replace the dismissible error banner inside the results modal.
+     *
+     * Errors surfaced via Moodle's Notification toasts render behind the
+     * open modal, so route them into a banner at the top of the modal body
+     * instead. Falls back to a toast when the modal isn't open.
+     *
+     * @param {string} message Error message text.
+     */
+    function showModalError(message) {
+        var modal = document.getElementById('ai-results-modal');
+        var body = modal && modal.querySelector('.ai-results-body');
+        if (!body) {
+            Notification.addNotification({message: message, type: 'error'});
+            return;
+        }
+
+        clearModalError();
+
+        var banner = document.createElement('div');
+        banner.id = 'ai-results-error';
+        banner.className = 'mastermind-modal-error';
+        banner.setAttribute('role', 'alert');
+
+        var text = document.createElement('span');
+        text.className = 'mastermind-modal-error-text';
+        text.textContent = message;
+        banner.appendChild(text);
+
+        var close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'mastermind-modal-error-close';
+        close.setAttribute('aria-label', 'Dismiss');
+        close.innerHTML = '&times;';
+        close.addEventListener('click', clearModalError);
+        banner.appendChild(close);
+
+        body.parentNode.insertBefore(banner, body);
+    }
+
+    /**
+     * Remove the results-modal error banner if present.
+     */
+    function clearModalError() {
+        var existing = document.getElementById('ai-results-error');
+        if (existing) {
+            existing.remove();
+        }
     }
 
     /**
@@ -585,22 +644,16 @@ function(Ajax, Notification, Str, AiPolicy) {
     }
 
     /**
-     * Show a refinement error notification.
+     * Show a refinement error inside the open results modal.
      *
      * @param {string} detail Optional server-provided error detail
      */
     function showRefineError(detail) {
         Str.get_string('refine_error', 'block_mastermind_assistant').then(function(s) {
-            Notification.addNotification({
-                message: detail ? s + ' (' + detail + ')' : s,
-                type: 'error'
-            });
+            showModalError(detail ? s + ' (' + detail + ')' : s);
             return s;
         }).catch(function() {
-            Notification.addNotification({
-                message: detail || 'Could not refine the result. Please try again.',
-                type: 'error'
-            });
+            showModalError(detail || 'Could not refine the result. Please try again.');
         });
     }
 

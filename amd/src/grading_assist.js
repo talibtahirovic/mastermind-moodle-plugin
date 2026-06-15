@@ -89,6 +89,56 @@ function(Ajax, Notification, Str, AiPolicy) {
     }
 
     /**
+     * Show or replace the dismissible error banner inside the grading modal.
+     *
+     * Moodle toasts render behind the open modal, so route analyze errors into
+     * a banner at the top of the modal body instead. Falls back to a toast when
+     * the modal isn't open.
+     *
+     * @param {string} message Error message text.
+     */
+    function showModalError(message) {
+        var modal = document.getElementById('grading-assist-modal');
+        var body = modal && modal.querySelector('.mastermind-preview-body');
+        if (!modal || modal.style.display === 'none' || !body) {
+            toast(message, 'error');
+            return;
+        }
+
+        clearModalError();
+
+        var banner = document.createElement('div');
+        banner.id = 'grading-assist-error';
+        banner.className = 'mastermind-modal-error';
+        banner.setAttribute('role', 'alert');
+
+        var text = document.createElement('span');
+        text.className = 'mastermind-modal-error-text';
+        text.textContent = message;
+        banner.appendChild(text);
+
+        var close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'mastermind-modal-error-close';
+        close.setAttribute('aria-label', 'Dismiss');
+        close.innerHTML = '&times;';
+        close.addEventListener('click', clearModalError);
+        banner.appendChild(close);
+
+        body.parentNode.insertBefore(banner, body);
+    }
+
+    /**
+     * Remove the grading modal's error banner if present.
+     */
+    function clearModalError() {
+        var existing = document.getElementById('grading-assist-error');
+        if (existing) {
+            existing.remove();
+        }
+    }
+
+    /**
      * Mark the form as changed so Moodle warns before navigation.
      */
     function markFormChanged() {
@@ -325,19 +375,20 @@ function(Ajax, Notification, Str, AiPolicy) {
         if (oldResult) {
             oldResult.remove();
         }
+        clearModalError();
 
         callService('analyze', itemid).then(function(response) {
             if (!response.success) {
                 button.disabled = false;
                 button.textContent = originalLabel;
-                toast(response.error || strings.errorgeneric, 'error');
+                showModalError(response.error || strings.errorgeneric);
                 return null;
             }
             var analysis = {};
             try {
                 analysis = JSON.parse(response.analysis);
             } catch (e) {
-                toast(strings.errorgeneric, 'error');
+                showModalError(strings.errorgeneric);
                 button.disabled = false;
                 button.textContent = originalLabel;
                 return null;
@@ -348,7 +399,7 @@ function(Ajax, Notification, Str, AiPolicy) {
         }).catch(function(err) {
             button.disabled = false;
             button.textContent = originalLabel;
-            Notification.exception(err);
+            showModalError((err && err.message) || strings.errorgeneric);
         });
     }
 

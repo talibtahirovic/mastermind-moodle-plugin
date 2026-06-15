@@ -2937,3 +2937,46 @@
     margin: 0;
     color: #718096;
 }
+
+/* ===== In-modal error banner =====
+   API/validation errors surface inside the open modal instead of behind it
+   (Moodle toasts render under the overlay). Two themes: a light banner for the
+   light modals (course preview, report builder, grading) and a dark variant for
+   the dark AI results modal. Each banner sits at the top of the modal body. */
+.mastermind-modal-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 12px 24px;
+    padding: 10px 14px;
+    border: 1px solid #f5c2c7;
+    border-radius: 8px;
+    background: #f8d7da;
+    color: #842029;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.mastermind-modal-error-text {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.mastermind-modal-error-close {
+    flex-shrink: 0;
+    padding: 0 4px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* Dark variant for the AI results modal (.ai-results-modal). */
+.ai-results-modal .mastermind-modal-error {
+    border-color: rgba(248, 113, 113, 0.4);
+    background: rgba(248, 113, 113, 0.15);
+    color: #fecaca;
+}

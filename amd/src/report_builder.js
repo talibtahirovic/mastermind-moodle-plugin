@@ -52,6 +52,56 @@ function(Ajax, Notification, Str, AiPolicy) {
     }
 
     /**
+     * Show or replace the dismissible error banner inside the report modal.
+     *
+     * Moodle toasts render behind the open modal, so route generation/refine
+     * errors into a banner at the top of the modal body instead. Falls back to
+     * a toast when the modal isn't open.
+     *
+     * @param {string} message Error message text.
+     */
+    function showModalError(message) {
+        var modal = document.getElementById('report-builder-modal');
+        var body = modal && modal.querySelector('.mastermind-preview-body');
+        if (!modal || modal.style.display === 'none' || !body) {
+            toast(message, 'error');
+            return;
+        }
+
+        clearModalError();
+
+        var banner = document.createElement('div');
+        banner.id = 'report-builder-error';
+        banner.className = 'mastermind-modal-error';
+        banner.setAttribute('role', 'alert');
+
+        var text = document.createElement('span');
+        text.className = 'mastermind-modal-error-text';
+        text.textContent = message;
+        banner.appendChild(text);
+
+        var close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'mastermind-modal-error-close';
+        close.setAttribute('aria-label', 'Dismiss');
+        close.innerHTML = '&times;';
+        close.addEventListener('click', clearModalError);
+        banner.appendChild(close);
+
+        body.parentNode.insertBefore(banner, body);
+    }
+
+    /**
+     * Remove the report modal's error banner if present.
+     */
+    function clearModalError() {
+        var existing = document.getElementById('report-builder-error');
+        if (existing) {
+            existing.remove();
+        }
+    }
+
+    /**
      * Append a chat bubble to the request history panel.
      *
      * @param {string} role 'user' or 'assistant'.
@@ -170,6 +220,7 @@ function(Ajax, Notification, Str, AiPolicy) {
         button.disabled = true;
         var originalLabel = button.textContent;
         button.textContent = strings.generating;
+        clearModalError();
 
         Ajax.call([{
             methodname: 'block_mastermind_assistant_generate_report',
@@ -186,7 +237,7 @@ function(Ajax, Notification, Str, AiPolicy) {
             button.textContent = originalLabel;
 
             if (!response.success) {
-                toast(response.message || strings.errorgeneric, 'error');
+                showModalError(response.message || strings.errorgeneric);
                 return null;
             }
 
@@ -206,7 +257,7 @@ function(Ajax, Notification, Str, AiPolicy) {
         }).catch(function(err) {
             button.disabled = false;
             button.textContent = originalLabel;
-            Notification.exception(err);
+            showModalError((err && err.message) || strings.errorgeneric);
         });
     }
 

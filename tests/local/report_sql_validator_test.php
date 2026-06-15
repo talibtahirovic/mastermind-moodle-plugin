@@ -437,4 +437,62 @@ final class report_sql_validator_test extends \advanced_testcase {
         $this->assertSame('SELECT id FROM {course} WHERE id = 1', $sql);
         $this->assertSame([], $params);
     }
+
+    /**
+     * Data provider: trailing LIMIT clauses that must be stripped, paired with
+     * the expected statement once the clause is removed.
+     *
+     * @return array[]
+     */
+    public static function strip_trailing_limit_provider(): array {
+        $base = 'SELECT id FROM {course} WHERE id = :courseid';
+        return [
+            'LIMIT n' => [$base . ' LIMIT 500', $base],
+            'LIMIT n, m' => [$base . ' LIMIT 0, 500', $base],
+            'LIMIT n OFFSET m' => [$base . ' LIMIT 10 OFFSET 5', $base],
+            'lowercase limit' => [$base . ' limit 100', $base],
+            'mixed case' => [$base . ' Limit 25', $base],
+            'trailing newline after limit' => [$base . " LIMIT 500\n", $base],
+            'trailing spaces after limit' => [$base . ' LIMIT 500   ', $base],
+            'newline before limit' => [$base . "\nLIMIT 500", $base],
+            'extra spacing inside n, m' => [$base . ' LIMIT 0 ,  500', $base],
+        ];
+    }
+
+    /**
+     * A trailing LIMIT clause is removed so Moodle's own row-cap LIMIT does
+     * not collide with it ('... LIMIT 500 LIMIT 0, 500' is a syntax error).
+     *
+     * @dataProvider strip_trailing_limit_provider
+     * @param string $sql Statement ending in a LIMIT clause.
+     * @param string $expected Statement with the trailing LIMIT removed.
+     */
+    public function test_strip_trailing_limit_removes_trailing_clause(string $sql, string $expected): void {
+        $this->assertSame($expected, report_sql_validator::strip_trailing_limit($sql));
+    }
+
+    /**
+     * A statement without a trailing LIMIT passes through unchanged.
+     */
+    public function test_strip_trailing_limit_passthrough_without_limit(): void {
+        $sql = 'SELECT id, fullname FROM {course} WHERE id = :courseid ORDER BY fullname';
+        $this->assertSame($sql, report_sql_validator::strip_trailing_limit($sql));
+    }
+
+    /**
+     * A LIMIT inside a subquery is NOT at the very end and must be preserved;
+     * only a LIMIT anchored at the end of the whole statement is stripped.
+     */
+    public function test_strip_trailing_limit_keeps_subquery_limit(): void {
+        $sql = 'SELECT u.id'
+            . ' FROM {user} u'
+            . ' JOIN {user_enrolments} ue ON ue.userid = u.id'
+            . ' WHERE ue.enrolid IN (SELECT id FROM {enrol} LIMIT 5)'
+            . ' AND ue.userid = :courseid';
+        // No trailing LIMIT — the subquery LIMIT stays untouched.
+        $this->assertSame($sql, report_sql_validator::strip_trailing_limit($sql));
+
+        // With a trailing LIMIT added, only that outer one is removed.
+        $this->assertSame($sql, report_sql_validator::strip_trailing_limit($sql . ' LIMIT 200'));
+    }
 }

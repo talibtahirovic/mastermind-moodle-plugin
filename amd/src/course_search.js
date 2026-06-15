@@ -784,13 +784,27 @@ function($, Ajax, Notification, AiPolicy, Str) {
             payload.source_summary = refineSourceSummary;
         }
 
+        clearModalError();
+
         Ajax.call([{
             methodname: 'block_mastermind_assistant_refine_course',
             args: {payload: JSON.stringify(payload)},
             timeout: 600000,
             done: function(response) {
                 if (response.success && response.preview) {
-                    var refined = JSON.parse(response.preview);
+                    // Parsing/rendering can throw if the AI shape varies;
+                    // surface that inside the modal instead of leaking an
+                    // unhandled rejection ("response could not be handled").
+                    var refined;
+                    try {
+                        refined = JSON.parse(response.preview);
+                    } catch (parseError) {
+                        showCourseRefineError(parseError && parseError.message);
+                        $textarea.prop('disabled', false);
+                        $refineBtn.prop('disabled', false).html(originalLabel);
+                        $('#mastermind-course-preview-create').prop('disabled', false);
+                        return;
+                    }
                     appendCourseRefineConversation(feedback, refined);
                     // Re-render the modal with the refined structure; the
                     // Create button always applies the displayed structure.
@@ -837,17 +851,52 @@ function($, Ajax, Notification, AiPolicy, Str) {
     }
 
     /**
-     * Show a refinement error notification.
+     * Show a refinement error inside the open course preview modal.
      *
      * @param {string} detail Optional server-provided error detail
      */
     function showCourseRefineError(detail) {
         Str.get_string('refine_error', 'block_mastermind_assistant').then(function(s) {
-            Notification.alert('Error', detail ? s + ' (' + detail + ')' : s, 'OK');
+            showModalError(detail ? s + ' (' + detail + ')' : s);
             return s;
         }).catch(function() {
-            Notification.alert('Error', detail || 'Could not refine the result. Please try again.', 'OK');
+            showModalError(detail || 'Could not refine the result. Please try again.');
         });
+    }
+
+    /**
+     * Show or replace the dismissible error banner inside the course preview
+     * modal.
+     *
+     * Moodle's Notification dialogs render behind the open overlay, so route
+     * errors into a banner at the top of the modal body instead. Falls back to
+     * a Notification alert when the modal isn't open.
+     *
+     * @param {string} message Error message text.
+     */
+    function showModalError(message) {
+        var $body = $('#mastermind-course-preview-overlay .mastermind-course-preview-body');
+        if (!$body.length) {
+            Notification.alert('Error', message, 'OK');
+            return;
+        }
+
+        clearModalError();
+
+        var $banner = $('<div id="mastermind-course-preview-error" class="mastermind-modal-error" role="alert"></div>');
+        $('<span class="mastermind-modal-error-text"></span>').text(message).appendTo($banner);
+        var $close = $('<button type="button" class="mastermind-modal-error-close" aria-label="Dismiss">&times;</button>');
+        $close.on('click', clearModalError);
+        $banner.append($close);
+
+        $body.prepend($banner);
+    }
+
+    /**
+     * Remove the course preview modal's error banner if present.
+     */
+    function clearModalError() {
+        $('#mastermind-course-preview-error').remove();
     }
 
     /**

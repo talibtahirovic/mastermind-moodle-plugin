@@ -44,7 +44,7 @@ use Exception;
  * validates that SQL through report_sql_validator (the real security gate),
  * executes it read-only with :courseid bound server-side from the validated
  * course context, and returns the result rows. A validation or execution
- * failure triggers exactly one automatic repair round-trip to the dashboard
+ * failure triggers up to two automatic repair round-trips to the dashboard
  * before giving up.
  */
 class generate_report extends external_api {
@@ -120,13 +120,19 @@ class generate_report extends external_api {
         }
     }
 
+    /** @var int Maximum number of repair round-trips after the initial call. */
+    public const MAX_REPAIRS = 2;
+
     /**
-     * Generate with one automatic repair round-trip.
+     * Generate with up to two automatic repair round-trips.
      *
      * Calls the dashboard, validates and executes the returned SQL. On a
-     * validation OR execution failure the dashboard is called once more with
-     * a repair hint {sql, error}; a second failure returns the friendly
-     * 'report_failed' message. Maximum two dashboard calls per invocation.
+     * validation OR execution failure the dashboard is called again with a
+     * repair hint {sql, error} carrying the latest failure; this is retried up
+     * to MAX_REPAIRS times so a genuine column-name error the model fixes on
+     * the second try still succeeds. After the repairs are exhausted the
+     * friendly 'report_failed' message is returned. Maximum three dashboard
+     * calls per invocation (initial + two repairs).
      *
      * @param callable $requester fn(array $payload): array — the dashboard call.
      * @param array $payload Dashboard request payload (without repair key).
@@ -137,7 +143,8 @@ class generate_report extends external_api {
         $response = $requester($payload);
         $processed = self::process_dashboard_response(is_array($response) ? $response : [], $courseid);
 
-        if (!$processed['ok']) {
+        $attempts = 0;
+        while (!$processed['ok'] && $attempts < self::MAX_REPAIRS) {
             $repairpayload = $payload;
             $repairpayload['repair'] = [
                 'sql' => $processed['sql'],
@@ -145,6 +152,7 @@ class generate_report extends external_api {
             ];
             $response = $requester($repairpayload);
             $processed = self::process_dashboard_response(is_array($response) ? $response : [], $courseid);
+            $attempts++;
         }
 
         if (!$processed['ok']) {
@@ -184,10 +192,14 @@ class generate_report extends external_api {
         }
 
         try {
-            // Execution-time only: rewrite repeated :courseid occurrences
+            // Execution-time only: strip any trailing LIMIT first (Moodle
+            // appends its own ` LIMIT 0, n` for the row cap, which would
+            // otherwise collide), then rewrite repeated :courseid occurrences
             // into unique names (Moodle's DML forbids reusing a named param).
-            // The validator above always saw the original statement.
-            [$execsql, $execparams] = report_sql_validator::prepare_courseid_bindings($sql, $courseid);
+            // The validator above and the $sql echoed back for export always
+            // see the original statement.
+            $execsql = report_sql_validator::strip_trailing_limit($sql);
+            [$execsql, $execparams] = report_sql_validator::prepare_courseid_bindings($execsql, $courseid);
             $records = $DB->get_records_sql($execsql, $execparams, 0, self::MAX_ROWS);
         } catch (\Throwable $e) {
             return [

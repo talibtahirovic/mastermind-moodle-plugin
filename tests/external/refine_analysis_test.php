@@ -146,6 +146,59 @@ final class refine_analysis_test extends \advanced_testcase {
         $this->assertStringNotContainsString('Invalid refinement payload', $result['error']);
     }
 
+    public function test_return_path_tolerates_refined_shape_variance(): void {
+        // A refined dashboard response with an EXTRA section, a section missing
+        // its optional description / learning_objectives, and an activity
+        // missing optional keys. The return path must coerce this into the
+        // declared shape so clean_returnvalue() never rejects it.
+        $airesponse = [
+            'recommendations' => 'Added a coral reefs section as requested.',
+            'structure' => [
+                'sections' => [
+                    [
+                        'section_name' => 'Week 1',
+                        'status' => 'UNCHANGED',
+                        'description' => 'Intro week',
+                        'activities' => [
+                            ['activity_name' => 'Welcome', 'moodle_type' => 'page', 'status' => 'KEEP'],
+                        ],
+                        'learning_objectives' => ['Understand the basics'],
+                    ],
+                    [
+                        // Extra, freshly added section with only a name — every
+                        // optional key omitted.
+                        'section_name' => 'Coral Reefs',
+                        'activities' => [
+                            // Activity missing the optional description/status.
+                            ['activity_name' => 'Reef quiz', 'moodle_type' => 'quiz'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $result = [
+            'success' => true,
+            'recommendations' => get_full_analysis::extract_recommendations($airesponse),
+            'structure' => get_full_analysis::extract_structure($airesponse),
+        ];
+
+        // The declared return structure must accept the normalized payload.
+        $cleaned = \external_api::clean_returnvalue(refine_analysis::execute_returns(), $result);
+
+        $this->assertTrue($cleaned['success']);
+        $decoded = json_decode($cleaned['structure'], true);
+        $this->assertCount(2, $decoded['sections']);
+        // The extra section's omitted optional keys are filled with defaults.
+        $this->assertSame('Coral Reefs', $decoded['sections'][1]['section_name']);
+        $this->assertSame('NEW', $decoded['sections'][1]['status']);
+        $this->assertSame('', $decoded['sections'][1]['description']);
+        $this->assertSame([], $decoded['sections'][1]['learning_objectives']);
+        // The activity missing optional keys is filled too.
+        $this->assertSame('NEW', $decoded['sections'][1]['activities'][0]['status']);
+        $this->assertSame('', $decoded['sections'][1]['activities'][0]['description']);
+    }
+
     public function test_execute_allows_teacher_but_fails_without_api_key(): void {
         $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course();

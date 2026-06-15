@@ -408,6 +408,25 @@ class report_sql_validator {
     }
 
     /**
+     * Strip a single trailing LIMIT clause from a validated statement.
+     *
+     * Moodle's DML layer appends its own ` LIMIT 0, n` when a row cap is passed
+     * to $DB->get_records_sql(); if the AI-generated SQL already ends in a
+     * LIMIT, the two collide into '... LIMIT 500 LIMIT 0, 500' and the database
+     * rejects the statement. This removes only a LIMIT anchored at the very end
+     * of the statement — 'LIMIT n', 'LIMIT n, m' and 'LIMIT n OFFSET m', with
+     * any trailing whitespace or newlines — so a LIMIT buried inside a subquery
+     * is left untouched. Run at execution time only: the validator and the SQL
+     * echoed back for export always see the original statement.
+     *
+     * @param string $sql Validated SQL statement.
+     * @return string The statement without its trailing LIMIT clause.
+     */
+    public static function strip_trailing_limit(string $sql): string {
+        return preg_replace('/\s+limit\s+\d+(\s*,\s*\d+)?(\s+offset\s+\d+)?\s*$/i', '', $sql);
+    }
+
+    /**
      * Statements touching {user} must also reference a course-scoped
      * enrolment or activity table.
      *

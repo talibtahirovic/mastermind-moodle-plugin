@@ -77,10 +77,19 @@ class refine_course extends external_api {
             $client = new \block_mastermind_assistant\api_client();
             $refinedstructure = $client->refine_course($data);
 
+            // Coerce the refined structure into the exact shape the client
+            // preview renderer expects before encoding it. AI shape variance
+            // (an added section, a missing optional key, a string where a list
+            // is expected) would otherwise leave the client unable to parse or
+            // render the refined preview ("response could not be handled").
+            $preview = is_array($refinedstructure) && isset($refinedstructure['sections'])
+                ? get_full_analysis::normalize_structure($refinedstructure)
+                : $refinedstructure;
+
             // Preview only — the course is never created here.
             return [
                 'success' => true,
-                'preview' => json_encode($refinedstructure),
+                'preview' => json_encode($preview),
             ];
         } catch (Exception $e) {
             debugging('refine_course error: ' . $e->getMessage(), DEBUG_DEVELOPER);

@@ -57,10 +57,13 @@ class report_exporter {
             throw new \invalid_parameter_exception('Report SQL rejected: ' . $verdict['reason']);
         }
 
-        // Execution-time only: rewrite repeated :courseid occurrences into
-        // unique names (Moodle's DML forbids reusing a named param). The
-        // validator above always saw the original statement.
-        [$execsql, $execparams] = report_sql_validator::prepare_courseid_bindings($sql, $courseid);
+        // Execution-time only: strip any trailing LIMIT first (Moodle appends
+        // its own ` LIMIT 0, n` for the row cap, which would otherwise
+        // collide), then rewrite repeated :courseid occurrences into unique
+        // names (Moodle's DML forbids reusing a named param). The validator
+        // above always saw the original statement.
+        $execsql = report_sql_validator::strip_trailing_limit($sql);
+        [$execsql, $execparams] = report_sql_validator::prepare_courseid_bindings($execsql, $courseid);
         $records = $DB->get_records_sql($execsql, $execparams, 0, self::MAX_ROWS);
 
         $columns = [];

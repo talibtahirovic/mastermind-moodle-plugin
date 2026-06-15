@@ -162,9 +162,68 @@ class get_full_analysis extends external_api {
         }
 
         if (isset($structure['sections']) && is_array($structure['sections'])) {
-            return json_encode($structure);
+            return json_encode(self::normalize_structure($structure));
         }
         return is_string($structure) ? $structure : json_encode($structure);
+    }
+
+    /**
+     * Coerce a decoded structure into the exact shape the client renderer
+     * expects, regardless of AI shape variance.
+     *
+     * The dashboard's regenerated structures vary: a refined result may add a
+     * section, omit an optional key, or send a string where a list is expected.
+     * The client tree renderer reads section_name/status/description/activities
+     * /learning_objectives and per-activity activity_name/status/moodle_type
+     * /description. Filling defaults and casting types here means a valid
+     * regenerated structure with an extra section can never leave the client
+     * with a half-rendered tree or a failed parse.
+     *
+     * @param array $structure Decoded structure containing a 'sections' array.
+     * @return array Structure with every section/activity normalized.
+     */
+    public static function normalize_structure(array $structure): array {
+        $sections = [];
+        foreach ((array) ($structure['sections'] ?? []) as $section) {
+            if (!is_array($section)) {
+                continue;
+            }
+            $activities = [];
+            foreach ((array) ($section['activities'] ?? []) as $activity) {
+                if (!is_array($activity)) {
+                    continue;
+                }
+                $activities[] = [
+                    'activity_name' => (string) ($activity['activity_name'] ?? 'Untitled Activity'),
+                    'moodle_type' => (string) ($activity['moodle_type'] ?? 'page'),
+                    'status' => (string) ($activity['status'] ?? 'NEW'),
+                    'description' => (string) ($activity['description'] ?? ''),
+                ];
+            }
+            $objectives = [];
+            foreach ((array) ($section['learning_objectives'] ?? []) as $objective) {
+                if (is_string($objective) && $objective !== '') {
+                    $objectives[] = $objective;
+                }
+            }
+            $sections[] = [
+                'section_name' => (string) ($section['section_name'] ?? 'Untitled Section'),
+                'status' => (string) ($section['status'] ?? 'NEW'),
+                'description' => (string) ($section['description'] ?? ''),
+                'activities' => $activities,
+                'learning_objectives' => $objectives,
+            ];
+        }
+
+        $normalized = $structure;
+        $normalized['sections'] = $sections;
+        if (isset($structure['course_name'])) {
+            $normalized['course_name'] = (string) $structure['course_name'];
+        }
+        if (isset($structure['course_description'])) {
+            $normalized['course_description'] = (string) $structure['course_description'];
+        }
+        return $normalized;
     }
 
     /**

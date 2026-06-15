@@ -304,7 +304,7 @@ final class generate_report_test extends \advanced_testcase {
         $this->assertSame(2, $result['total_rows']);
     }
 
-    public function test_run_generation_fails_after_single_repair(): void {
+    public function test_run_generation_fails_after_two_repairs(): void {
         $this->resetAfterTest();
         [$course] = $this->create_environment();
 
@@ -319,13 +319,75 @@ final class generate_report_test extends \advanced_testcase {
 
         $result = generate_report::run_generation($requester, ['request' => 'x'], (int) $course->id);
 
-        // Exactly one repair attempt — never a third dashboard call.
-        $this->assertSame(2, $callcount);
+        // Up to two repair attempts — never a fourth dashboard call.
+        $this->assertSame(3, $callcount);
         $this->assertFalse($result['success']);
         $this->assertSame(
             get_string('report_failed', 'block_mastermind_assistant'),
             $result['message']
         );
+    }
+
+    public function test_run_generation_succeeds_on_second_repair(): void {
+        $this->resetAfterTest();
+        [$course] = $this->create_environment();
+
+        // First two responses fail validation/execution; the third is good,
+        // so a genuine error the model fixes on the second repair still wins.
+        $firstbad = $this->valid_dashboard_response();
+        $firstbad['sql'] = 'SELECT secret FROM {config}';
+        $secondbad = $this->valid_dashboard_response();
+        $secondbad['sql'] = 'SELECT nosuchcolumn FROM {course} WHERE id = :courseid';
+        $goodresponse = $this->valid_dashboard_response();
+
+        $calls = [];
+        $requester = function (array $payload) use (&$calls, $firstbad, $secondbad, $goodresponse): array {
+            $calls[] = $payload;
+            if (count($calls) === 1) {
+                return $firstbad;
+            }
+            if (count($calls) === 2) {
+                return $secondbad;
+            }
+            return $goodresponse;
+        };
+
+        $result = generate_report::run_generation($requester, ['request' => 'students'], (int) $course->id);
+
+        // Initial call + two repair calls = three dashboard calls.
+        $this->assertCount(3, $calls);
+        $this->assertArrayNotHasKey('repair', $calls[0]);
+        $this->assertStringContainsString('SQL validation failed', $calls[1]['repair']['error']);
+        $this->assertStringContainsString('SQL execution failed', $calls[2]['repair']['error']);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(2, $result['total_rows']);
+    }
+
+    public function test_process_dashboard_response_strips_trailing_limit(): void {
+        $this->resetAfterTest();
+        [$course] = $this->create_environment();
+
+        // A trailing LIMIT would otherwise collide with Moodle's own row-cap
+        // LIMIT ('... LIMIT 500 LIMIT 0, 500' is a syntax error). It must be
+        // stripped before execution, while the echoed export SQL keeps it.
+        $response = $this->valid_dashboard_response();
+        $response['sql'] = 'SELECT u.id, u.firstname
+                              FROM {user} u
+                              JOIN {user_enrolments} ue ON ue.userid = u.id
+                              JOIN {enrol} e ON e.id = ue.enrolid
+                             WHERE e.courseid = :courseid
+                          ORDER BY u.id ASC
+                             LIMIT 500';
+
+        $processed = generate_report::process_dashboard_response($response, (int) $course->id);
+
+        $this->assertTrue($processed['ok'], $processed['error']);
+        $this->assertSame(2, $processed['data']['total_rows']);
+        // The ORIGINAL SQL (with its LIMIT) is echoed back for the export
+        // buttons; the strip is an execution-time detail only.
+        $this->assertSame($response['sql'], $processed['data']['sql']);
+        $this->assertStringContainsString('LIMIT 500', $processed['data']['sql']);
     }
 
     public function test_run_generation_repairs_execution_errors_too(): void {
