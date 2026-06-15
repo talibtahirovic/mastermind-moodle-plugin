@@ -260,11 +260,23 @@ class grading_assist extends external_api {
             MUST_EXIST
         );
 
+        // Moodle assignments carry instructions in two separate fields: the
+        // Description (intro) and a dedicated "Activity instructions" field
+        // (activity), which teachers often use for the actual brief. Send both
+        // so the assistant has the full task context, not just the name.
+        $instructions = trim(self::clean_html((string) $instance->intro));
+        $activity = trim(self::clean_html((string) ($instance->activity ?? '')));
+        if ($activity !== '') {
+            $instructions = ($instructions !== '')
+                ? $instructions . "\n\n" . $activity
+                : $activity;
+        }
+
         $payload = [
             'type' => 'assignment',
             'task' => [
                 'name' => format_string($instance->name),
-                'instructions' => trim(self::clean_html((string) $instance->intro)),
+                'instructions' => $instructions,
                 'rubric' => self::get_rubric_text($context),
                 'max_grade' => ($instance->grade > 0) ? (float) $instance->grade : 100.0,
             ],

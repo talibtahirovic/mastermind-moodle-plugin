@@ -2685,6 +2685,7 @@
 .mastermind-refine-bar {
     display: flex;
     align-items: stretch;
+    flex-wrap: wrap;
     gap: 10px;
     padding: 14px 24px;
     border-top: 1px solid #e2e8f0;
@@ -2693,7 +2694,8 @@
 }
 
 .mastermind-refine-textarea {
-    flex: 1;
+    flex: 1 1 240px;
+    min-width: 0;
     resize: vertical;
     min-height: 44px;
     padding: 8px 12px;
@@ -2701,11 +2703,17 @@
     border-radius: 8px;
     font-size: 14px;
     line-height: 1.5;
+    box-sizing: border-box;
 }
 
+/* Override the shared .mastermind-secondary-button width:100%/margin so the
+   Regenerate button sits beside the textarea instead of collapsing it. */
 .mastermind-refine-btn {
     align-self: center;
     white-space: nowrap;
+    width: auto;
+    flex: 0 0 auto;
+    margin-top: 0;
 }
 
 .mastermind-refine-btn:disabled {

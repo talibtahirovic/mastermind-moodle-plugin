@@ -309,6 +309,39 @@ final class grading_assist_test extends \advanced_testcase {
         $this->assert_anonymized($payload);
     }
 
+    /**
+     * The payload must include the assignment's "Activity instructions"
+     * (assign.activity) in addition to the Description, since teachers often
+     * write the brief in that separate field.
+     *
+     * @covers \block_mastermind_assistant\external\grading_assist::build_assign_payload
+     */
+    public function test_assign_payload_includes_activity_instructions(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [, $assign, $cm, $student] = $this->create_assign_environment();
+        $activityhtml = '<p>Submit a 2000-word <strong>research paper</strong> with citations.</p>';
+        $DB->set_field('assign', 'activity', $activityhtml, ['id' => $assign->id]);
+        $this->create_onlinetext_submission($cm, $student, '<p>My paper.</p>');
+
+        $submission = $DB->get_record(
+            'assign_submission',
+            ['assignment' => $assign->id, 'userid' => $student->id],
+            '*',
+            MUST_EXIST
+        );
+
+        $payload = grading_assist::build_assign_payload($cm->id, (int) $submission->id);
+
+        // Both the Description and the Activity instructions are present
+        // (case-insensitive: html_to_text renders <strong> content uppercase).
+        $this->assertStringContainsStringIgnoringCase('climate change', $payload['task']['instructions']);
+        $this->assertStringContainsStringIgnoringCase('research paper', $payload['task']['instructions']);
+        $this->assert_anonymized($payload);
+    }
+
     public function test_quiz_essay_list_and_payload(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
