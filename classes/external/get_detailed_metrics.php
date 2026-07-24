@@ -32,6 +32,7 @@ use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use block_mastermind_assistant\local\scorm_metrics;
 
 /**
  * External service class for getting detailed course metrics.
@@ -104,6 +105,10 @@ class get_detailed_metrics extends external_api {
             'avg_quiz_attempts' => 0,
             'quiz_performance' => [],
             'assignment_submissions' => [],
+            'scorm_performance' => [],
+            'avg_scorm_score' => 'N/A',
+            'scorm_completion_rate' => 'N/A',
+            'weakest_scorm_sco' => 'N/A',
 
             // Category 4: Satisfaction & Feedback.
             'satisfaction_score' => 'No feedback activity',
@@ -188,10 +193,12 @@ class get_detailed_metrics extends external_api {
             $metrics['time_to_completion'] = $days . ' days';
         }
 
-        // Most/least completed section.
+        // Most/least completed section. Sections with no visible modules are
+        // excluded — an empty section would otherwise always rank as least
+        // completed (0 completions) and skew the recommendations.
         $sql = "SELECT cs.id, cs.section, cs.name, COUNT(DISTINCT cmc.userid) AS completions
                 FROM {course_sections} cs
-                LEFT JOIN {course_modules} cm ON cm.section = cs.id AND cm.visible = 1
+                JOIN {course_modules} cm ON cm.section = cs.id AND cm.visible = 1
                 LEFT JOIN {course_modules_completion} cmc ON cmc.coursemoduleid = cm.id AND cmc.completionstate > 0
                 WHERE cs.course = ?
                 GROUP BY cs.id, cs.section, cs.name
@@ -290,6 +297,20 @@ class get_detailed_metrics extends external_api {
                 'rate' => $enrolled > 0 ? round($sub / $enrolled * 100, 1) : 0,
             ];
         }, $assigns));
+
+        // SCORM performance: per-package and per-SCO aggregates from the
+        // tracking data (empty on courses without SCORM or on pre-4.3 sites).
+        $scormdata = scorm_metrics::collect($courseid);
+        $metrics['scorm_performance'] = $scormdata['packages'];
+        if ($scormdata['avg_scorm_score'] !== null) {
+            $metrics['avg_scorm_score'] = $scormdata['avg_scorm_score'];
+        }
+        if ($scormdata['scorm_completion_rate'] !== null) {
+            $metrics['scorm_completion_rate'] = $scormdata['scorm_completion_rate'];
+        }
+        if ($scormdata['weakest_scorm_sco'] !== null) {
+            $metrics['weakest_scorm_sco'] = $scormdata['weakest_scorm_sco'];
+        }
 
         // Category 4 metrics: Satisfaction & Feedback.
 

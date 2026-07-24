@@ -1317,6 +1317,35 @@ function(Ajax, Notification, Str, AiPolicy) {
             assignHTML += '</table></div>';
         }
 
+        // Build SCORM performance section if available.
+        var scormHTML = '';
+        if (metrics.scorm_performance && metrics.scorm_performance.length > 0) {
+            scormHTML = '<div class="metric-item"><div class="metric-label">Average SCORM Score</div>' +
+                '<div class="metric-value">' + metrics.avg_scorm_score + '%</div></div>' +
+                '<div class="metric-item"><div class="metric-label">SCORM Completion Rate</div>' +
+                '<div class="metric-value">' + metrics.scorm_completion_rate + '%</div></div>' +
+                '<div class="metric-item"><div class="metric-label">Weakest SCORM Unit</div>' +
+                '<div class="metric-value text">' + escapeHtml(metrics.weakest_scorm_sco) + '</div></div>';
+            metrics.scorm_performance.forEach(function(p) {
+                scormHTML += '<div class="metric-item" style="grid-column: 1 / -1;">' +
+                    '<div class="metric-label">SCORM Package: ' + escapeHtml(p.name) + '</div>' +
+                    '<table style="width:100%; margin-top:8px; font-size:13px; color:#e2e8f0;">' +
+                    '<tr style="opacity:0.6;"><th style="text-align:left; padding:4px;">Unit (SCO)</th>' +
+                    '<th style="text-align:right; padding:4px;">Avg Score</th>' +
+                    '<th style="text-align:right; padding:4px;">Pass Rate</th>' +
+                    '<th style="text-align:right; padding:4px;">Learners</th></tr>';
+                p.scoes.forEach(function(s) {
+                    scormHTML += '<tr><td style="padding:4px;">' + escapeHtml(s.title) + '</td>' +
+                        '<td style="text-align:right; padding:4px;">' +
+                            (s.avg_score !== null ? s.avg_score + '%' : '&mdash;') + '</td>' +
+                        '<td style="text-align:right; padding:4px;">' +
+                            (s.pass_rate !== null ? s.pass_rate + '%' : '&mdash;') + '</td>' +
+                        '<td style="text-align:right; padding:4px;">' + s.attempts + '</td></tr>';
+                });
+                scormHTML += '</table></div>';
+            });
+        }
+
         var modalHTML = '<div class="detailed-metrics-modal" id="detailed-metrics-modal">' +
             '<div class="detailed-metrics-content">' +
             '<div class="detailed-metrics-header">' +
@@ -1374,6 +1403,7 @@ function(Ajax, Notification, Str, AiPolicy) {
             '<div class="metric-item"><div class="metric-label">Most Failed Question</div>' +
             '<div class="metric-value text">' + escapeHtml(metrics.most_failed_question) + '</div></div>' +
             quizPerfHTML +
+            scormHTML +
             '</div></div>' +
 
             // Category 4: Satisfaction & Feedback.
@@ -1487,6 +1517,10 @@ function(Ajax, Notification, Str, AiPolicy) {
 
         if (m.least_completed_section && m.least_completed_section !== 'N/A') {
             parts.push('Weakest section: ' + m.least_completed_section + '.');
+        }
+
+        if (m.weakest_scorm_sco && m.weakest_scorm_sco !== 'N/A') {
+            parts.push('SCORM avg ' + m.avg_scorm_score + '%, weakest unit: ' + m.weakest_scorm_sco + '.');
         }
 
         return parts.length > 0 ? '<p>' + parts.join(' ') + '</p>' : '';

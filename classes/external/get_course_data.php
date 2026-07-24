@@ -37,6 +37,7 @@ use external_value;
 use context_course;
 use Exception;
 use moodle_exception;
+use block_mastermind_assistant\local\scorm_metrics;
 
 /**
  * External API for get course data.
@@ -448,6 +449,19 @@ class get_course_data extends external_api {
         }
 
         $data['audit_flags'] = $auditflags;
+
+        // SCORM performance: per-package and per-SCO tracking aggregates, so
+        // the AI analysis can reason about SCORM content like any other
+        // activity (empty on courses without SCORM data).
+        $scormdata = scorm_metrics::collect($courseid);
+        $data['scorm_performance'] = $scormdata['packages'];
+        if ($scormdata['weakest_scorm_sco'] !== null) {
+            $data['scorm_summary'] = [
+                'avg_score' => $scormdata['avg_scorm_score'],
+                'completion_rate' => $scormdata['scorm_completion_rate'],
+                'weakest_sco' => $scormdata['weakest_scorm_sco'],
+            ];
+        }
 
         return $data;
     }
