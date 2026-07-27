@@ -38,6 +38,7 @@ use context_course;
 use Exception;
 use moodle_exception;
 use block_mastermind_assistant\local\scorm_metrics;
+use block_mastermind_assistant\local\feedback_metrics;
 
 /**
  * External API for get course data.
@@ -134,7 +135,7 @@ class get_course_data extends external_api {
                 'enddate' => $course->enddate,
                 'visible' => $course->visible,
                 'category' => $course->category,
-                'numsections' => $course->numsections,
+                'numsections' => $course->numsections ?? 0,
                 'timecreated' => $course->timecreated,
                 'timemodified' => $course->timemodified,
             ],
@@ -330,58 +331,9 @@ class get_course_data extends external_api {
         }
         $data['forum_posts'] = $forumposts;
 
-        // Get feedback data.
-        $feedbackdata = [];
-        $feedbacks = $DB->get_records('feedback', ['course' => $courseid]);
-        foreach ($feedbacks as $feedback) {
-            $fbdata = [
-                'feedback' => [
-                    'id' => $feedback->id,
-                    'name' => $feedback->name,
-                    'intro' => strip_tags($feedback->intro),
-                    'timeopen' => $feedback->timeopen,
-                    'timeclose' => $feedback->timeclose,
-                ],
-                'items' => [],
-                'values' => [],
-            ];
-
-            // Get feedback items.
-            $items = $DB->get_records('feedback_item', ['feedback' => $feedback->id]);
-            foreach ($items as $item) {
-                $fbdata['items'][] = [
-                    'id' => $item->id,
-                    'name' => $item->name,
-                    'label' => $item->label,
-                    'typ' => $item->typ,
-                    'presentation' => $item->presentation,
-                    'required' => $item->required,
-                ];
-            }
-
-            // Get feedback values.
-            $values = $DB->get_records_sql("
-                SELECT fv.*, fi.name as itemname, fi.typ
-                FROM {feedback_value} fv
-                JOIN {feedback_item} fi ON fi.id = fv.item
-                WHERE fi.feedback = ?
-            ", [$feedback->id]);
-
-            foreach ($values as $value) {
-                $fbdata['values'][] = [
-                    'id' => $value->id,
-                    'item' => $value->item,
-                    'completed' => $value->completed,
-                    'userid' => $value->userid,
-                    'value' => $value->value,
-                    'itemname' => $value->itemname,
-                    'itemtype' => $value->typ,
-                ];
-            }
-
-            $feedbackdata[] = $fbdata;
-        }
-        $data['feedback'] = $feedbackdata;
+        // Evaluation data: per-question aggregates and anonymized comments.
+        // Raw per-user response rows are deliberately not sent to the AI.
+        $data['feedback'] = feedback_metrics::collect($courseid);
 
         // Audit flags — help AI detect post-copy issues.
         $auditflags = [];

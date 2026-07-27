@@ -33,6 +33,7 @@ use external_function_parameters;
 use external_value;
 use external_single_structure;
 use block_mastermind_assistant\local\scorm_metrics;
+use block_mastermind_assistant\local\feedback_metrics;
 
 /**
  * External service class for getting detailed course metrics.
@@ -314,18 +315,11 @@ class get_detailed_metrics extends external_api {
 
         // Category 4 metrics: Satisfaction & Feedback.
 
-        // Query feedback module if present.
-        $avgfeedback = $DB->get_field_sql(
-            "SELECT AVG(CAST(fv.value AS DECIMAL(10,2)))
-               FROM {feedback_item} fi
-               JOIN {feedback_value} fv ON fv.item = fi.id
-               JOIN {feedback} f ON f.id = fi.feedback AND f.course = ?
-              WHERE fi.typ IN ('numeric', 'multichoice_rated')",
-            [$courseid]
-        );
-        if ($avgfeedback) {
-            $metrics['satisfaction_score'] = round($avgfeedback, 1) . '/5';
+        $feedbackdata = feedback_metrics::collect($courseid);
+        if ($feedbackdata['satisfaction'] !== null) {
+            $metrics['satisfaction_score'] = number_format($feedbackdata['satisfaction'], 1) . '/5';
         }
+        $metrics['feedback_summary'] = $feedbackdata['activities'];
 
         // Category 5 metrics: Retention & Dropout.
 

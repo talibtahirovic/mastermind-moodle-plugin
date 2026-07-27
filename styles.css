@@ -1363,6 +1363,11 @@
     min-height: 0;
 }
 
+.ai-results-evaluation {
+    grid-column: 1 / -1;
+    margin-bottom: 16px;
+}
+
 .ai-results-recommendations,
 .ai-results-structure {
     padding: 24px;

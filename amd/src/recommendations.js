@@ -352,6 +352,22 @@ function(Ajax, Notification, Str, AiPolicy) {
         var sections = parseAIResponse(recommendations);
         var formattedRecommendations = formatRecommendationsAsChecklist(sections.mainRecommendations);
 
+        var insightsHTML = '';
+        if (sections.evaluationInsights) {
+            insightsHTML = '<div class="ai-results-evaluation">' +
+                '<h3 class="ai-results-section-title">Evaluation insights</h3>' +
+                '<p>' + escapeHtml(sections.evaluationInsights.summary) + '</p>';
+            if (Array.isArray(sections.evaluationInsights.themes) &&
+                    sections.evaluationInsights.themes.length > 0) {
+                insightsHTML += '<ul>';
+                sections.evaluationInsights.themes.forEach(function(theme) {
+                    insightsHTML += '<li>' + escapeHtml(theme) + '</li>';
+                });
+                insightsHTML += '</ul>';
+            }
+            insightsHTML += '</div>';
+        }
+
         var modalHTML = '<div class="ai-results-modal" id="ai-results-modal">' +
             '<div class="ai-results-content">' +
             '<div class="ai-results-header">' +
@@ -359,6 +375,7 @@ function(Ajax, Notification, Str, AiPolicy) {
             '<button class="close-modal-btn" id="close-ai-results">&times;</button>' +
             '</div>' +
             '<div class="ai-results-body">' +
+            insightsHTML +
             '<div class="ai-results-recommendations">' +
             '<h3 class="ai-results-section-title">Recommendations</h3>' +
             '<div class="ai-results-recommendations-content">' +
@@ -666,7 +683,8 @@ function(Ajax, Notification, Str, AiPolicy) {
         var result = {
             mainRecommendations: response,
             improvements: '',
-            updatedStructure: ''
+            updatedStructure: '',
+            evaluationInsights: null
         };
 
         // First try to parse as JSON
@@ -684,6 +702,10 @@ function(Ajax, Notification, Str, AiPolicy) {
 
                 // Use analysis summary as main recommendations
                 result.mainRecommendations = jsonData.analysis_summary || 'Course analysis completed.';
+
+                if (jsonData.evaluation_insights && jsonData.evaluation_insights.summary) {
+                    result.evaluationInsights = jsonData.evaluation_insights;
+                }
 
                 return result;
             }
@@ -1346,6 +1368,36 @@ function(Ajax, Notification, Str, AiPolicy) {
             });
         }
 
+        var feedbackHTML = '';
+        if (metrics.feedback_summary && metrics.feedback_summary.length > 0) {
+            metrics.feedback_summary.forEach(function(fb) {
+                feedbackHTML += '<div class="metric-item" style="grid-column: 1 / -1;">' +
+                    '<div class="metric-label">' + escapeHtml(fb.name) +
+                    ' &mdash; ' + fb.responses + ' responses</div>' +
+                    '<table style="width:100%; border-collapse:collapse; font-size:0.85em; margin-top:6px;">' +
+                    '<tr><th style="text-align:left; padding:4px;">Question</th>' +
+                    '<th style="text-align:right; padding:4px;">Responses</th>' +
+                    '<th style="text-align:right; padding:4px;">Avg</th></tr>';
+                fb.questions.forEach(function(q) {
+                    feedbackHTML += '<tr><td style="padding:4px; word-break:break-word;">' +
+                        escapeHtml(q.question) + '</td>' +
+                        '<td style="text-align:right; padding:4px;">' + q.responses + '</td>' +
+                        '<td style="text-align:right; padding:4px;">' +
+                        (q.avg !== null ? q.avg : '&mdash;') + '</td></tr>';
+                });
+                feedbackHTML += '</table>';
+                if (fb.comments && fb.comments.length > 0) {
+                    feedbackHTML += '<div class="metric-label" style="margin-top:8px;">What learners said</div>';
+                    fb.comments.slice(0, 5).forEach(function(comment) {
+                        feedbackHTML += '<div style="padding:4px 8px; margin-top:4px; ' +
+                            'border-left:3px solid #8b5cf6; font-size:0.85em; word-break:break-word;">' +
+                            escapeHtml(comment) + '</div>';
+                    });
+                }
+                feedbackHTML += '</div>';
+            });
+        }
+
         var modalHTML = '<div class="detailed-metrics-modal" id="detailed-metrics-modal">' +
             '<div class="detailed-metrics-content">' +
             '<div class="detailed-metrics-header">' +
@@ -1414,6 +1466,7 @@ function(Ajax, Notification, Str, AiPolicy) {
             '<div class="metrics-grid">' +
             '<div class="metric-item"><div class="metric-label">Satisfaction Score</div>' +
             '<div class="metric-value text">' + escapeHtml(metrics.satisfaction_score) + '</div></div>' +
+            feedbackHTML +
             '</div></div>' +
 
             // Category 5: Retention & Dropout.
@@ -1521,6 +1574,21 @@ function(Ajax, Notification, Str, AiPolicy) {
 
         if (m.weakest_scorm_sco && m.weakest_scorm_sco !== 'N/A') {
             parts.push('SCORM avg ' + m.avg_scorm_score + '%, weakest unit: ' + m.weakest_scorm_sco + '.');
+        }
+
+        if (m.feedback_summary && m.feedback_summary.length > 0) {
+            var lowestrated = null;
+            m.feedback_summary.forEach(function(fb) {
+                fb.questions.forEach(function(q) {
+                    if (q.avg !== null && (lowestrated === null || q.avg < lowestrated.avg)) {
+                        lowestrated = q;
+                    }
+                });
+            });
+            if (lowestrated) {
+                parts.push('Lowest-rated evaluation question: ' +
+                    escapeHtml(lowestrated.question) + ' (avg ' + lowestrated.avg + ').');
+            }
         }
 
         return parts.length > 0 ? '<p>' + parts.join(' ') + '</p>' : '';

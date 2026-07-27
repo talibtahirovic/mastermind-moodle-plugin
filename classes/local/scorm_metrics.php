@@ -22,8 +22,12 @@ defined('MOODLE_INTERNAL') || die();
  * Aggregates SCORM tracking data for a course.
  *
  * Reads the Moodle 4.3+ tracking schema (scorm_attempt / scorm_scoes_value /
- * scorm_element). On older sites the tables are absent and collect() returns
- * the empty shape, so callers never need a version check of their own.
+ * scorm_element) for both SCORM 1.2 (cmi.core.*) and SCORM 2004 (cmi.score.raw,
+ * cmi.completion_status, cmi.success_status) element names. 2004 scaled scores
+ * (cmi.score.scaled) are not normalized — packages reporting only scaled
+ * scores contribute status data but no score averages. On older sites the
+ * tables are absent and collect() returns the empty shape, so callers never
+ * need a version check of their own.
  *
  * @package    block_mastermind_assistant
  * @copyright  2026 The Namers
@@ -33,6 +37,12 @@ class scorm_metrics {
 
     /** @var float A SCO score at or above this raw score counts as passed. */
     const PASS_SCORE = 70.0;
+
+    /** @var string[] Score elements: SCORM 1.2 and SCORM 2004. */
+    const SCORE_ELEMENTS = ['cmi.core.score.raw', 'cmi.score.raw'];
+
+    /** @var string[] Status elements: SCORM 1.2 lesson status, SCORM 2004 completion/success. */
+    const STATUS_ELEMENTS = ['cmi.core.lesson_status', 'cmi.completion_status', 'cmi.success_status'];
 
     /**
      * Collect per-package and per-SCO SCORM aggregates for a course.
@@ -64,7 +74,8 @@ class scorm_metrics {
                   JOIN {scorm} s ON s.id = a.scormid
                   JOIN {scorm_scoes} sc ON sc.id = v.scoid
                   JOIN {scorm_element} e ON e.id = v.elementid
-                 WHERE s.course = ? AND e.element IN ('cmi.core.score.raw', 'cmi.core.lesson_status')";
+                 WHERE s.course = ? AND e.element IN ('cmi.core.score.raw', 'cmi.core.lesson_status',
+                       'cmi.score.raw', 'cmi.completion_status', 'cmi.success_status')";
         $rows = $DB->get_records_sql($sql, [$courseid]);
         if (!$rows) {
             return $empty;
@@ -81,11 +92,17 @@ class scorm_metrics {
             if (!isset($pkg['scoes'][$row->scoid])) {
                 $pkg['scoes'][$row->scoid] = ['title' => $row->scotitle, 'scores' => [], 'statuses' => []];
             }
-            if ($row->element === 'cmi.core.score.raw') {
+            if (in_array($row->element, self::SCORE_ELEMENTS, true)) {
                 $pkg['scoes'][$row->scoid]['scores'][] = (float) $row->value;
             } else {
-                $pkg['scoes'][$row->scoid]['statuses'][$row->userid] = $row->value;
-                $pkg['users'][$row->userid][$row->scoid] = $row->value;
+                // Done when 1.2 lesson_status or 2004 success/completion says so.
+                // OR-ing per user+SCO means multiple status elements (2004 has
+                // two) can never double-count a user.
+                $done = in_array($row->value, ['passed', 'completed'], true);
+                $pkg['scoes'][$row->scoid]['statuses'][$row->userid] =
+                    ($pkg['scoes'][$row->scoid]['statuses'][$row->userid] ?? false) || $done;
+                $pkg['users'][$row->userid][$row->scoid] =
+                    ($pkg['users'][$row->userid][$row->scoid] ?? false) || $done;
             }
             unset($pkg);
         }
@@ -102,8 +119,7 @@ class scorm_metrics {
             $pkgscores = [];
             foreach ($pkg['scoes'] as $sco) {
                 $avg = $sco['scores'] ? array_sum($sco['scores']) / count($sco['scores']) : null;
-                $passed = count(array_filter($sco['statuses'],
-                    fn($s) => $s === 'passed' || $s === 'completed'));
+                $passed = count(array_filter($sco['statuses']));
                 $entry = [
                     'title' => $sco['title'],
                     'attempts' => count($sco['statuses']),
@@ -123,8 +139,7 @@ class scorm_metrics {
             // passed/completed status for them.
             $pkgcompleted = 0;
             foreach ($pkg['users'] as $statuses) {
-                $done = count(array_filter($statuses, fn($s) => $s === 'passed' || $s === 'completed'));
-                if ($done === count($scoids)) {
+                if (count(array_filter($statuses)) === count($scoids)) {
                     $pkgcompleted++;
                 }
             }
