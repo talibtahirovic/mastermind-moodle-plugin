@@ -82,7 +82,7 @@ class create_course_from_document extends external_api {
     public static function execute($filedata, $filetype, $filename, $categoryid = 1, $previewonly = false, $contextjson = '') {
         global $DB;
 
-        @set_time_limit(600);
+        \core_php_time_limit::raise(600);
 
         try {
             $params = self::validate_parameters(self::execute_parameters(), [

@@ -1039,14 +1039,15 @@ function($, Ajax, Notification, AiPolicy, Str, ContextForm) {
     }
 
     /**
-     * Escape HTML to prevent XSS
+     * Escape HTML to prevent XSS, including double quotes so the result is
+     * safe inside double-quoted HTML attributes (e.g. data-coursename).
      * @param {string} text Text to escape
      * @returns {string} Escaped text
      */
     function escapeHtml(text) {
         var div = document.createElement('div');
         div.textContent = text;
-        return div.innerHTML;
+        return div.innerHTML.replace(/"/g, '&quot;');
     }
 
     /**

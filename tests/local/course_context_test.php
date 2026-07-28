@@ -30,7 +30,6 @@ namespace block_mastermind_assistant\local;
  * @covers \block_mastermind_assistant\local\course_context
  */
 final class course_context_test extends \basic_testcase {
-
     public function test_from_json_keeps_all_whitelisted_keys(): void {
         $json = json_encode([
             'target_audience' => 'university_students',
