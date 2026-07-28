@@ -55,6 +55,12 @@ class create_course_with_ai extends external_api {
                 VALUE_DEFAULT,
                 false
             ),
+            'contextjson' => new external_value(
+                PARAM_RAW,
+                'Optional JSON-encoded creation context (audience, difficulty, language, ...)',
+                VALUE_DEFAULT,
+                ''
+            ),
         ]);
     }
 
@@ -64,27 +70,32 @@ class create_course_with_ai extends external_api {
      * @param string $coursename
      * @param int $categoryid
      * @param bool $previewonly
+     * @param string $contextjson Optional JSON-encoded creation context.
      * @return array
      */
-    public static function execute($coursename, $categoryid = 1, $previewonly = false) {
+    public static function execute($coursename, $categoryid = 1, $previewonly = false, $contextjson = '') {
         global $DB;
 
-        @set_time_limit(300);
+        \core_php_time_limit::raise(300);
 
         try {
             $params = self::validate_parameters(self::execute_parameters(), [
                 'coursename' => $coursename,
                 'categoryid' => $categoryid,
                 'previewonly' => $previewonly,
+                'contextjson' => $contextjson,
             ]);
 
             $context = context_system::instance();
             self::validate_context($context);
             require_capability('moodle/course:create', $context);
 
+            // Optional instructor-provided context — best-effort, never fatal.
+            $creationcontext = \block_mastermind_assistant\local\course_context::from_json($params['contextjson']);
+
             // Get AI-generated course structure from dashboard.
             $client = new \block_mastermind_assistant\api_client();
-            $aistructure = $client->generate_course($params['coursename']);
+            $aistructure = $client->generate_course($params['coursename'], $creationcontext);
 
             // Preview mode: return the structure without creating the course.
             if ($params['previewonly']) {

@@ -417,8 +417,22 @@ class block_mastermind_assistant extends block_base {
             $catlist[] = ['id' => (int) $catid, 'name' => $catname];
         }
 
+        // Language list for the creation context modal: labels in the user's
+        // UI language, values as English names (stable tokens for the AI).
+        $stringman = get_string_manager();
+        $locallangs = $stringman->get_list_of_languages();
+        $enlangs = $stringman->get_list_of_languages('en');
+        \core_collator::asort($locallangs);
+        $langlist = [];
+        foreach ($locallangs as $code => $label) {
+            if (empty($enlangs[$code])) {
+                continue;
+            }
+            $langlist[] = ['label' => $label, 'value' => $enlangs[$code]];
+        }
+
         // Include the AMD module for handling course search.
-        $this->page->requires->js_call_amd('block_mastermind_assistant/course_search', 'init', [$catlist]);
+        $this->page->requires->js_call_amd('block_mastermind_assistant/course_search', 'init', [$catlist, $langlist]);
 
         return $this->content;
     }

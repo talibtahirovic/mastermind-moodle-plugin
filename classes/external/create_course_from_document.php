@@ -59,6 +59,12 @@ class create_course_from_document extends external_api {
                 VALUE_DEFAULT,
                 false
             ),
+            'contextjson' => new external_value(
+                PARAM_RAW,
+                'Optional JSON-encoded creation context (audience, difficulty, language, ...)',
+                VALUE_DEFAULT,
+                ''
+            ),
         ]);
     }
 
@@ -70,9 +76,10 @@ class create_course_from_document extends external_api {
      * @param string $filename Original file name.
      * @param int $categoryid Category ID.
      * @param bool $previewonly Return structure preview without creating course.
+     * @param string $contextjson Optional JSON-encoded creation context.
      * @return array
      */
-    public static function execute($filedata, $filetype, $filename, $categoryid = 1, $previewonly = false) {
+    public static function execute($filedata, $filetype, $filename, $categoryid = 1, $previewonly = false, $contextjson = '') {
         global $DB;
 
         @set_time_limit(600);
@@ -84,6 +91,7 @@ class create_course_from_document extends external_api {
                 'filename' => $filename,
                 'categoryid' => $categoryid,
                 'previewonly' => $previewonly,
+                'contextjson' => $contextjson,
             ]);
 
             $context = context_system::instance();
@@ -113,12 +121,16 @@ class create_course_from_document extends external_api {
                 throw new Exception('File appears to be empty or too small.');
             }
 
+            // Optional instructor-provided context — best-effort, never fatal.
+            $creationcontext = \block_mastermind_assistant\local\course_context::from_json($params['contextjson']);
+
             // Send to dashboard for text extraction + AI generation.
             $client = new \block_mastermind_assistant\api_client();
             $aistructure = $client->generate_course_from_document(
                 $params['filedata'],
                 $params['filetype'],
-                $params['filename']
+                $params['filename'],
+                $creationcontext
             );
 
             // Preview mode: return the structure without creating the course.

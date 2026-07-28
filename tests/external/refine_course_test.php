@@ -93,6 +93,29 @@ final class refine_course_test extends \advanced_testcase {
         $this->assertSame('Summary of the uploaded syllabus document.', $result['source_summary']);
     }
 
+    public function test_validate_payload_keeps_sanitized_context(): void {
+        $result = refine_course::validate_payload($this->valid_payload([
+            'context' => [
+                'language' => '  German ',
+                'difficulty' => 'beginner',
+                'injected' => 'dropped',
+            ],
+        ]));
+
+        $this->assertSame([
+            'difficulty' => 'beginner',
+            'language' => 'German',
+        ], $result['context']);
+    }
+
+    public function test_validate_payload_omits_unusable_context(): void {
+        $result = refine_course::validate_payload($this->valid_payload([
+            'context' => ['injected' => 'x', 'difficulty' => 42],
+        ]));
+
+        $this->assertArrayNotHasKey('context', $result);
+    }
+
     public function test_validate_payload_caps_conversation_at_eight_entries(): void {
         $conversation = [];
         for ($i = 1; $i <= 10; $i++) {

@@ -159,10 +159,15 @@ class api_client {
      * Generate a complete course structure from scratch.
      *
      * @param string $coursename
+     * @param array $context Optional instructor-provided creation context.
      * @return array
      */
-    public function generate_course(string $coursename): array {
-        return $this->request('/api/ma/generate-course', ['coursename' => $coursename]);
+    public function generate_course(string $coursename, array $context = []): array {
+        $payload = ['coursename' => $coursename];
+        if (!empty($context)) {
+            $payload['context'] = $context;
+        }
+        return $this->request('/api/ma/generate-course', $payload);
     }
 
     /**
@@ -181,14 +186,24 @@ class api_client {
      * @param string $filedata Base64-encoded file content
      * @param string $filetype MIME type (application/pdf, etc.)
      * @param string $filename Original file name
+     * @param array $context Optional instructor-provided creation context.
      * @return array
      */
-    public function generate_course_from_document(string $filedata, string $filetype, string $filename): array {
-        return $this->request('/api/ma/generate-course-from-document', [
+    public function generate_course_from_document(
+        string $filedata,
+        string $filetype,
+        string $filename,
+        array $context = []
+    ): array {
+        $payload = [
             'file_data' => $filedata,
             'file_type' => $filetype,
             'file_name' => $filename,
-        ], 'POST', 600);
+        ];
+        if (!empty($context)) {
+            $payload['context'] = $context;
+        }
+        return $this->request('/api/ma/generate-course-from-document', $payload, 'POST', 600);
     }
 
     /**

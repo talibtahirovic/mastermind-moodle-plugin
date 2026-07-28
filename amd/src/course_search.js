@@ -21,8 +21,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define(['jquery', 'core/ajax', 'core/notification', 'block_mastermind_assistant/ai_policy', 'core/str'],
-function($, Ajax, Notification, AiPolicy, Str) {
+define(['jquery', 'core/ajax', 'core/notification', 'block_mastermind_assistant/ai_policy', 'core/str',
+        'block_mastermind_assistant/course_context_form'],
+function($, Ajax, Notification, AiPolicy, Str, ContextForm) {
 
     var searchTimeout = null;
     var $searchInput = null;
@@ -54,6 +55,14 @@ function($, Ajax, Notification, AiPolicy, Str) {
     // refinement so the dashboard stays grounded in the source document.
     var refineSourceSummary = '';
 
+    // Languages for the course details modal ({label, value} objects).
+    var allLanguages = [];
+
+    // Optional instructor context from the course details modal. Sent as
+    // contextjson on creation calls and as context on refine payloads so
+    // refinements keep honoring the instructor's requirements.
+    var creationContext = {};
+
     // Maximum conversation entries kept client-side (oldest pairs dropped).
     var MAX_CONVERSATION_ENTRIES = 8;
 
@@ -84,8 +93,9 @@ function($, Ajax, Notification, AiPolicy, Str) {
     /**
      * Initialize the course search interface
      * @param {Array} categories List of {id, name} objects from server
+     * @param {Array} languages List of {label, value} language options
      */
-    function init(categories) {
+    function init(categories, languages) {
         $searchInput = $('#mastermind-course-search-input');
         $searchResults = $('#mastermind-search-results');
         $searchLoading = $('#mastermind-search-loading');
@@ -96,6 +106,7 @@ function($, Ajax, Notification, AiPolicy, Str) {
         $filterYear = $('#mastermind-filter-year');
 
         allCategories = categories || [];
+        allLanguages = languages || [];
         loadCategories(categories);
 
         // Handle search input
@@ -165,8 +176,18 @@ function($, Ajax, Notification, AiPolicy, Str) {
         // Create from document.
         $('#mastermind-create-from-doc-btn').on('click', function(e) {
             e.preventDefault();
+            if (!selectedFile) {
+                return;
+            }
             AiPolicy.checkAndProceed(function() {
-                createCourseFromDocument();
+                ContextForm.open({
+                    heading: selectedFile.name,
+                    languages: allLanguages,
+                    onGenerate: function(context) {
+                        creationContext = context || {};
+                        createCourseFromDocument();
+                    }
+                });
             });
         });
     }
@@ -319,7 +340,14 @@ function($, Ajax, Notification, AiPolicy, Str) {
                 e.preventDefault();
                 var courseName = $(this).data('coursename');
                 AiPolicy.checkAndProceed(function() {
-                    createCourseWithAI(courseName);
+                    ContextForm.open({
+                        heading: courseName,
+                        languages: allLanguages,
+                        onGenerate: function(context) {
+                            creationContext = context || {};
+                            createCourseWithAI(courseName);
+                        }
+                    });
                 });
             });
 
@@ -469,7 +497,8 @@ function($, Ajax, Notification, AiPolicy, Str) {
             args: {
                 coursename: courseName,
                 categoryid: getCategoryIdFromPage(),
-                previewonly: true
+                previewonly: true,
+                contextjson: $.isEmptyObject(creationContext) ? '' : JSON.stringify(creationContext)
             },
             done: function(response) {
                 hideCreationProgress();
@@ -536,7 +565,8 @@ function($, Ajax, Notification, AiPolicy, Str) {
                     filetype: mimeType,
                     filename: selectedFile.name,
                     categoryid: categoryId,
-                    previewonly: true
+                    previewonly: true,
+                    contextjson: $.isEmptyObject(creationContext) ? '' : JSON.stringify(creationContext)
                 },
                 done: function(response) {
                     $docCreationProgress.hide();
@@ -784,6 +814,11 @@ function($, Ajax, Notification, AiPolicy, Str) {
             payload.source_summary = refineSourceSummary;
         }
 
+        // Keep refinements aligned with the instructor's requirements.
+        if (!$.isEmptyObject(creationContext)) {
+            payload.context = creationContext;
+        }
+
         clearModalError();
 
         Ajax.call([{
@@ -906,6 +941,7 @@ function($, Ajax, Notification, AiPolicy, Str) {
         $('#mastermind-course-preview-overlay').remove();
         $(document).off('keydown.coursePreview');
         pendingStructure = null;
+        creationContext = {};
     }
 
     /**

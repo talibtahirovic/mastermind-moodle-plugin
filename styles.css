@@ -2993,3 +2993,85 @@
     background: rgba(248, 113, 113, 0.15);
     color: #fecaca;
 }
+
+/* ── Course creation context modal ─────────────────────────────── */
+.mastermind-ctx-modal {
+    max-width: 560px;
+}
+
+.mastermind-ctx-heading {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.mastermind-ctx-subtitle {
+    margin: 0 0 16px;
+    font-size: 13px;
+    color: #666;
+}
+
+.mastermind-ctx-field {
+    margin-bottom: 14px;
+}
+
+.mastermind-ctx-label {
+    display: block;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.mastermind-ctx-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.mastermind-ctx-chip {
+    border: 1px solid #ccc;
+    border-radius: 16px;
+    background: #fff;
+    color: #333;
+    padding: 5px 14px;
+    font-size: 13px;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mastermind-ctx-chip:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.mastermind-ctx-chip.selected {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: #fff;
+}
+
+.mastermind-ctx-other-input,
+.mastermind-ctx-select,
+.mastermind-ctx-textarea {
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.mastermind-ctx-textarea {
+    resize: vertical;
+    min-height: 56px;
+}
+
+.mastermind-ctx-other-input {
+    display: none;
+}
+
+.mastermind-ctx-other-input.visible {
+    display: block;
+}

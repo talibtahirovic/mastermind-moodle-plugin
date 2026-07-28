@@ -133,6 +133,13 @@ class refine_course extends external_api {
             $payload['source_summary'] = $data['source_summary'];
         }
 
+        if (isset($data['context']) && is_array($data['context'])) {
+            $creationcontext = \block_mastermind_assistant\local\course_context::from_array($data['context']);
+            if (!empty($creationcontext)) {
+                $payload['context'] = $creationcontext;
+            }
+        }
+
         return $payload;
     }
 
